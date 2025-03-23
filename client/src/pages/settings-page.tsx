@@ -65,6 +65,7 @@ export default function SettingsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -776,7 +777,11 @@ export default function SettingsPage() {
                       <div className="bg-white overflow-hidden shadow rounded-lg">
                         <div className="flex justify-between items-center p-4 border-b">
                           <h4 className="text-base font-medium text-gray-900">All Users</h4>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setIsAddUserModalOpen(true)}
+                          >
                             <UserPlus className="h-4 w-4 mr-2" />
                             Add User
                           </Button>
