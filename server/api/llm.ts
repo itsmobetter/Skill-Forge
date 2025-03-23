@@ -29,7 +29,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       throw new Error("No API key available");
     }
     
-    return createGeminiService(apiKey, apiConfig.model || "gemini-1.5-pro");
+    return createGeminiService(apiKey, apiConfig.model || "gemini-1.5-flash");
   };
 
   // Ask a question

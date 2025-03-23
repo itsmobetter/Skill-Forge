@@ -59,7 +59,7 @@ async function seedInitialData() {
       await storage.createApiConfig({
         userId: adminUser.id,
         provider: "Google",
-        model: "gemini-1.5-pro",
+        model: "gemini-1.5-flash",
         apiKey: process.env.GEMINI_API_KEY || "",
         endpoint: "",
         temperature: 0.7,
@@ -227,7 +227,7 @@ async function seedInitialData() {
       await storage.createApiConfig({
         userId: regularUser.id,
         provider: "Google",
-        model: "gemini-1.5-pro",
+        model: "gemini-1.5-flash",
         apiKey: process.env.GEMINI_API_KEY || "",
         endpoint: "",
         temperature: 0.7,
