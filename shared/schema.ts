@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -41,7 +41,7 @@ export const apiConfigs = pgTable("api_configs", {
   model: text("model").notNull(), // Now "gemini-1.5-flash" instead of "gpt-4o"
   apiKey: text("api_key").notNull(),
   endpoint: text("endpoint"),
-  temperature: integer("temperature").notNull(),
+  temperature: real("temperature").notNull(),
   maxTokens: integer("max_tokens").notNull(),
   useTranscriptions: boolean("use_transcriptions").default(true).notNull(),
   usePdf: boolean("use_pdf").default(true).notNull(),
@@ -130,7 +130,7 @@ export type ModuleCompletion = {
   userId: number;
   moduleId: string;
   completed: boolean;
-  completedAt?: Date;
+  completedAt: Date | null;
 };
 
 // Quiz questions

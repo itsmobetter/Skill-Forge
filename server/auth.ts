@@ -76,10 +76,14 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
+      // Check if this is the first user (will be admin)
+      const allUsers = await storage.getAllUsers();
+      const isFirstUser = allUsers.length === 0;
+
       const user = await storage.createUser({
         ...req.body,
         password: await hashPassword(req.body.password),
-        isAdmin: false // Default to regular user
+        isAdmin: isFirstUser // First user is admin, others are regular users
       });
 
       // Create default profile for the user
@@ -95,18 +99,20 @@ export function setupAuth(app: Express) {
       });
 
       // Create default API settings
-      await storage.createApiConfig({
+      const defaultConfig = {
         userId: user.id,
-        provider: "OpenAI",
-        model: "gpt-4o",
-        apiKey: process.env.OPENAI_API_KEY || "",
+        provider: "Google",
+        model: "gemini-1.5-flash", // Use Gemini Flash 1.5 as default
+        apiKey: process.env.GEMINI_API_KEY || "",
         endpoint: "",
         temperature: 0.7,
         maxTokens: 1024,
         useTranscriptions: true,
         usePdf: true,
         streaming: true
-      });
+      };
+
+      await storage.createApiConfig(defaultConfig);
 
       req.login(user, (err) => {
         if (err) return next(err);

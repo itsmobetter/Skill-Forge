@@ -251,6 +251,14 @@ export default function SettingsPage() {
                     >
                       API Configuration
                     </TabsTrigger>
+                    {user?.isAdmin && (
+                      <TabsTrigger 
+                        value="users" 
+                        className="data-[state=active]:border-b-2 data-[state=active]:border-primary-500 data-[state=active]:text-primary-600 rounded-none"
+                      >
+                        User Management
+                      </TabsTrigger>
+                    )}
                   </TabsList>
                 </div>
                 

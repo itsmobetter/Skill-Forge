@@ -10,7 +10,7 @@ import {
   QuizResult, InsertQuizResult,
   ModuleTranscription, InsertModuleTranscription,
   ChatInteraction, InsertChatInteraction,
-  ModuleCompletion, InsertModuleCompletion
+  ModuleCompletion
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -21,7 +21,7 @@ const MemoryStore = createMemoryStore(session);
 const scryptAsync = promisify(scrypt);
 
 export interface IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using any for session store to avoid type issues
 
   // User management
   getUser(id: number): Promise<User | undefined>;
@@ -101,7 +101,7 @@ export class MemStorage implements IStorage {
   private moduleTranscriptions: Map<string, ModuleTranscription>;
   private chatInteractions: Map<number, ChatInteraction>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: any;
   
   private userIdCounter: number;
   private userProfileIdCounter: number;
@@ -488,7 +488,7 @@ export class MemStorage implements IStorage {
   async createModuleTranscription(transcription: InsertModuleTranscription): Promise<ModuleTranscription> {
     const id = this.moduleTranscriptionIdCounter++;
     const newTranscription: ModuleTranscription = { ...transcription, id };
-    this.moduleTranscriptions.set(moduleId, newTranscription);
+    this.moduleTranscriptions.set(transcription.moduleId, newTranscription);
     return newTranscription;
   }
 
@@ -523,4 +523,427 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import connectPg from "connect-pg-simple";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
+import { Pool } from "@neondatabase/serverless";
+import {
+  users,
+  userProfiles,
+  apiConfigs,
+  courses,
+  modules,
+  materials,
+  userCourseProgress,
+  moduleCompletions,
+  quizQuestions,
+  quizResults,
+  moduleTranscriptions,
+  chatInteractions
+} from "@shared/schema";
+
+const PostgresSessionStore = connectPg(session);
+
+export class DatabaseStorage implements IStorage {
+  sessionStore: any;
+  private pool: Pool;
+
+  constructor() {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL not set");
+    }
+    
+    this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    this.sessionStore = new PostgresSessionStore({
+      pool: this.pool,
+      createTableIfMissing: true,
+    });
+  }
+
+  // User management
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUserPassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return false;
+    }
+
+    // Note: In a real app, password verification should be done here or in auth.ts
+    // This is simplified for the demo
+    
+    await db.update(users)
+      .set({ password: newPassword })
+      .where(eq(users.id, userId));
+    
+    return true;
+  }
+
+  // User profile
+  async getUserProfile(userId: number): Promise<UserProfile | undefined> {
+    const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+    return profile;
+  }
+
+  async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
+    const [userProfile] = await db.insert(userProfiles).values(profile).returning();
+    return userProfile;
+  }
+
+  async updateUserProfile(userId: number, profile: Partial<UserProfile>): Promise<UserProfile> {
+    const [existingProfile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+    if (!existingProfile) {
+      throw new Error("Profile not found");
+    }
+
+    const [updatedProfile] = await db.update(userProfiles)
+      .set(profile)
+      .where(eq(userProfiles.userId, userId))
+      .returning();
+    
+    return updatedProfile;
+  }
+
+  // API configuration
+  async getUserApiConfig(userId: number): Promise<ApiConfig | undefined> {
+    const [config] = await db.select().from(apiConfigs).where(eq(apiConfigs.userId, userId));
+    return config;
+  }
+
+  async createApiConfig(config: InsertApiConfig): Promise<ApiConfig> {
+    const [apiConfig] = await db.insert(apiConfigs).values(config).returning();
+    return apiConfig;
+  }
+
+  async updateUserApiConfig(userId: number, configUpdate: Partial<ApiConfig>): Promise<ApiConfig> {
+    const [existingConfig] = await db.select().from(apiConfigs).where(eq(apiConfigs.userId, userId));
+    if (!existingConfig) {
+      throw new Error("API configuration not found");
+    }
+
+    const [updatedConfig] = await db.update(apiConfigs)
+      .set(configUpdate)
+      .where(eq(apiConfigs.userId, userId))
+      .returning();
+    
+    return updatedConfig;
+  }
+
+  // Course management
+  async getAllCourses(): Promise<Course[]> {
+    return await db.select().from(courses);
+  }
+
+  async getCourse(id: string): Promise<Course | undefined> {
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    return course;
+  }
+
+  async createCourse(course: InsertCourse): Promise<Course> {
+    const id = Math.random().toString(36).substring(2, 11);
+    const [newCourse] = await db.insert(courses).values({...course, id}).returning();
+    return newCourse;
+  }
+
+  async updateCourse(id: string, courseUpdate: Partial<Course>): Promise<Course> {
+    const [existingCourse] = await db.select().from(courses).where(eq(courses.id, id));
+    if (!existingCourse) {
+      throw new Error("Course not found");
+    }
+
+    const [updatedCourse] = await db.update(courses)
+      .set(courseUpdate)
+      .where(eq(courses.id, id))
+      .returning();
+    
+    return updatedCourse;
+  }
+
+  async deleteCourse(id: string): Promise<void> {
+    // We should ideally perform this in a transaction and cascade delete related entities
+    await db.delete(userCourseProgress).where(eq(userCourseProgress.courseId, id));
+    await db.delete(materials).where(eq(materials.courseId, id));
+    
+    // Get modules to delete
+    const modulesToDelete = await db.select().from(modules).where(eq(modules.courseId, id));
+    
+    for (const module of modulesToDelete) {
+      await db.delete(quizQuestions).where(eq(quizQuestions.moduleId, module.id));
+      await db.delete(moduleTranscriptions).where(eq(moduleTranscriptions.moduleId, module.id));
+      await db.delete(moduleCompletions).where(eq(moduleCompletions.moduleId, module.id));
+      await db.delete(quizResults).where(eq(quizResults.moduleId, module.id));
+    }
+    
+    await db.delete(modules).where(eq(modules.courseId, id));
+    await db.delete(courses).where(eq(courses.id, id));
+  }
+
+  // Module management
+  async getCourseModules(courseId: string): Promise<Module[]> {
+    return await db.select().from(modules)
+      .where(eq(modules.courseId, courseId))
+      .orderBy(modules.order);
+  }
+
+  async getModule(id: string): Promise<Module | undefined> {
+    const [module] = await db.select().from(modules).where(eq(modules.id, id));
+    return module;
+  }
+
+  async createModule(module: InsertModule): Promise<Module> {
+    const id = Math.random().toString(36).substring(2, 11);
+    const [newModule] = await db.insert(modules).values({...module, id}).returning();
+    return newModule;
+  }
+
+  async updateModule(id: string, moduleUpdate: Partial<Module>): Promise<Module> {
+    const [existingModule] = await db.select().from(modules).where(eq(modules.id, id));
+    if (!existingModule) {
+      throw new Error("Module not found");
+    }
+
+    const [updatedModule] = await db.update(modules)
+      .set(moduleUpdate)
+      .where(eq(modules.id, id))
+      .returning();
+    
+    return updatedModule;
+  }
+
+  async deleteModule(id: string): Promise<void> {
+    await db.delete(quizQuestions).where(eq(quizQuestions.moduleId, id));
+    await db.delete(moduleTranscriptions).where(eq(moduleTranscriptions.moduleId, id));
+    await db.delete(moduleCompletions).where(eq(moduleCompletions.moduleId, id));
+    await db.delete(quizResults).where(eq(quizResults.moduleId, id));
+    await db.delete(modules).where(eq(modules.id, id));
+  }
+
+  // Material management
+  async getCourseMaterials(courseId: string): Promise<Material[]> {
+    return await db.select().from(materials).where(eq(materials.courseId, courseId));
+  }
+
+  async createMaterial(material: InsertMaterial): Promise<Material> {
+    const id = Math.random().toString(36).substring(2, 11);
+    const [newMaterial] = await db.insert(materials).values({...material, id}).returning();
+    return newMaterial;
+  }
+
+  async updateMaterial(id: string, materialUpdate: Partial<Material>): Promise<Material> {
+    const [existingMaterial] = await db.select().from(materials).where(eq(materials.id, id));
+    if (!existingMaterial) {
+      throw new Error("Material not found");
+    }
+
+    const [updatedMaterial] = await db.update(materials)
+      .set(materialUpdate)
+      .where(eq(materials.id, id))
+      .returning();
+    
+    return updatedMaterial;
+  }
+
+  async deleteMaterial(id: string): Promise<void> {
+    await db.delete(materials).where(eq(materials.id, id));
+  }
+
+  // User course progress
+  async getUserCourses(userId: number): Promise<(Course & { progress: number; completed: boolean })[]> {
+    const userCourses = await db.select({
+      ...courses,
+      progress: userCourseProgress.progress,
+      completed: userCourseProgress.completed,
+    })
+    .from(userCourseProgress)
+    .innerJoin(courses, eq(userCourseProgress.courseId, courses.id))
+    .where(eq(userCourseProgress.userId, userId));
+
+    return userCourses as (Course & { progress: number; completed: boolean })[];
+  }
+
+  async getUserCourseProgress(userId: number, courseId: string): Promise<UserCourseProgress | undefined> {
+    const [progress] = await db.select().from(userCourseProgress)
+      .where(and(
+        eq(userCourseProgress.userId, userId),
+        eq(userCourseProgress.courseId, courseId)
+      ));
+    
+    return progress;
+  }
+
+  async createUserCourseProgress(progress: InsertUserCourseProgress): Promise<UserCourseProgress> {
+    const [newProgress] = await db.insert(userCourseProgress)
+      .values(progress)
+      .returning();
+    
+    return newProgress;
+  }
+
+  async updateUserCourseProgress(id: number, progressUpdate: Partial<UserCourseProgress>): Promise<UserCourseProgress> {
+    const [existingProgress] = await db.select().from(userCourseProgress).where(eq(userCourseProgress.id, id));
+    if (!existingProgress) {
+      throw new Error("Progress record not found");
+    }
+
+    const [updatedProgress] = await db.update(userCourseProgress)
+      .set(progressUpdate)
+      .where(eq(userCourseProgress.id, id))
+      .returning();
+    
+    return updatedProgress;
+  }
+
+  // Module completion
+  async getModuleCompletion(userId: number, moduleId: string): Promise<ModuleCompletion | undefined> {
+    const [completion] = await db.select().from(moduleCompletions)
+      .where(and(
+        eq(moduleCompletions.userId, userId),
+        eq(moduleCompletions.moduleId, moduleId)
+      ));
+    
+    return completion;
+  }
+
+  async getCompletedModules(userId: number, courseId: string): Promise<ModuleCompletion[]> {
+    const courseModules = await this.getCourseModules(courseId);
+    const moduleIds = courseModules.map(module => module.id);
+    
+    const completions = await db.select().from(moduleCompletions)
+      .where(and(
+        eq(moduleCompletions.userId, userId),
+        eq(moduleCompletions.completed, true)
+      ));
+    
+    return completions.filter(completion => moduleIds.includes(completion.moduleId));
+  }
+
+  async updateModuleCompletion(userId: number, moduleId: string, completed: boolean): Promise<ModuleCompletion> {
+    const existingCompletion = await this.getModuleCompletion(userId, moduleId);
+    
+    if (existingCompletion) {
+      // Update existing completion
+      const [updatedCompletion] = await db.update(moduleCompletions)
+        .set({
+          completed,
+          completedAt: completed ? new Date() : null,
+        })
+        .where(and(
+          eq(moduleCompletions.userId, userId),
+          eq(moduleCompletions.moduleId, moduleId)
+        ))
+        .returning();
+      
+      return updatedCompletion;
+    } else {
+      // Create new completion
+      const [newCompletion] = await db.insert(moduleCompletions)
+        .values({
+          userId,
+          moduleId,
+          completed,
+          completedAt: completed ? new Date() : null,
+        })
+        .returning();
+      
+      return newCompletion;
+    }
+  }
+
+  // Quiz management
+  async getQuizQuestions(moduleId: string): Promise<QuizQuestion[]> {
+    return await db.select().from(quizQuestions).where(eq(quizQuestions.moduleId, moduleId));
+  }
+
+  async createQuizQuestion(question: InsertQuizQuestion): Promise<QuizQuestion> {
+    const id = Math.random().toString(36).substring(2, 11);
+    const [newQuestion] = await db.insert(quizQuestions)
+      .values({...question, id})
+      .returning();
+    
+    return newQuestion;
+  }
+
+  async getQuizResults(userId: number, moduleId: string): Promise<QuizResult[]> {
+    return await db.select().from(quizResults)
+      .where(and(
+        eq(quizResults.userId, userId),
+        eq(quizResults.moduleId, moduleId)
+      ));
+  }
+
+  async createQuizResult(result: InsertQuizResult): Promise<QuizResult> {
+    const [newResult] = await db.insert(quizResults)
+      .values(result)
+      .returning();
+    
+    return newResult;
+  }
+
+  // Transcriptions
+  async getModuleTranscription(moduleId: string): Promise<ModuleTranscription | undefined> {
+    const [transcription] = await db.select().from(moduleTranscriptions)
+      .where(eq(moduleTranscriptions.moduleId, moduleId));
+    
+    return transcription;
+  }
+
+  async createModuleTranscription(transcription: InsertModuleTranscription): Promise<ModuleTranscription> {
+    const [newTranscription] = await db.insert(moduleTranscriptions)
+      .values(transcription)
+      .returning();
+    
+    return newTranscription;
+  }
+
+  async updateModuleTranscription(id: number, transcriptionUpdate: Partial<ModuleTranscription>): Promise<ModuleTranscription> {
+    const [existingTranscription] = await db.select().from(moduleTranscriptions).where(eq(moduleTranscriptions.id, id));
+    if (!existingTranscription) {
+      throw new Error("Transcription not found");
+    }
+
+    const [updatedTranscription] = await db.update(moduleTranscriptions)
+      .set(transcriptionUpdate)
+      .where(eq(moduleTranscriptions.id, id))
+      .returning();
+    
+    return updatedTranscription;
+  }
+
+  // Chat interactions
+  async getChatInteractions(userId: number, courseId: string): Promise<ChatInteraction[]> {
+    return await db.select().from(chatInteractions)
+      .where(and(
+        eq(chatInteractions.userId, userId),
+        eq(chatInteractions.courseId, courseId)
+      ))
+      .orderBy(desc(chatInteractions.timestamp));
+  }
+
+  async createChatInteraction(interaction: InsertChatInteraction): Promise<ChatInteraction> {
+    const [newInteraction] = await db.insert(chatInteractions)
+      .values(interaction)
+      .returning();
+    
+    return newInteraction;
+  }
+}
+
+// Use the Database Storage implementation
+export const storage = new DatabaseStorage();
