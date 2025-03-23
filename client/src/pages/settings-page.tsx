@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +47,24 @@ const passwordFormSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
+// New user schema
+const newUserSchema = z.object({
+  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  confirmPassword: z.string().min(6, { message: "Confirm password must be at least 6 characters." }),
+  firstName: z.string().min(2, { message: "First name must be at least 2 characters." }),
+  lastName: z.string().min(2, { message: "Last name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  isAdmin: z.boolean().default(false),
+  department: z.string().optional(),
+  position: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type NewUserFormValues = z.infer<typeof newUserSchema>;
+
 // API configuration schema
 const apiConfigSchema = z.object({
   provider: z.string(),
@@ -69,6 +88,22 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // New user form
+  const newUserForm = useForm<NewUserFormValues>({
+    resolver: zodResolver(newUserSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      confirmPassword: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      isAdmin: false,
+      department: "Quality Assurance",
+      position: "",
+    },
+  });
 
   // Fetch user profile
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
@@ -192,6 +227,32 @@ export default function SettingsPage() {
       });
     }
   });
+  
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (data: NewUserFormValues) => {
+      // Remove confirmPassword as it's not needed for API
+      const { confirmPassword, ...userData } = data;
+      const res = await apiRequest("POST", "/api/admin/users", userData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      setIsAddUserModalOpen(false);
+      newUserForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User created",
+        description: "The user has been successfully created.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create user",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   // Handle profile form submission
   const onProfileSubmit = (data: ProfileFormValues) => {
@@ -206,6 +267,11 @@ export default function SettingsPage() {
   // Handle API config form submission
   const onApiConfigSubmit = (data: ApiConfigFormValues) => {
     updateApiConfigMutation.mutate(data);
+  };
+  
+  // Handle new user form submission
+  const onNewUserSubmit = (data: NewUserFormValues) => {
+    createUserMutation.mutate(data);
   };
 
   // Reset API config to defaults
@@ -936,6 +1002,193 @@ export default function SettingsPage() {
           </div>
         </main>
       </div>
+      
+      {/* Add User Modal */}
+      <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account with the specified details.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...newUserForm}>
+            <form onSubmit={newUserForm.handleSubmit(onNewUserSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={newUserForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter first name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={newUserForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter last name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={newUserForm.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={newUserForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Enter email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={newUserForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Enter password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={newUserForm.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Confirm password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={newUserForm.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Engineering">Engineering</SelectItem>
+                        <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
+                        <SelectItem value="Production">Production</SelectItem>
+                        <SelectItem value="R&D">R&D</SelectItem>
+                        <SelectItem value="Management">Management</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={newUserForm.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter position" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={newUserForm.control}
+                name="isAdmin"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Admin User</FormLabel>
+                      <FormDescription>
+                        Make this user an administrator with full system access.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddUserModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createUserMutation.isPending}
+                >
+                  {createUserMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create User"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

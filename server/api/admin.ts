@@ -1,7 +1,68 @@
 import { Request, Response, Router } from "express";
 import { storage } from "../storage";
+import { insertUserSchema } from "@shared/schema";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
+// Function to hash a password
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 export function setupAdminRoutes(router: Router, requireAuth: any, requireAdmin: any) {
+  // Create new user (admin only)
+  router.post("/admin/users", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      // Validate the request body against the schema
+      const parseResult = insertUserSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid user data", 
+          errors: parseResult.error.errors 
+        });
+      }
+      
+      // Check if the username already exists
+      const existingUser = await storage.getUserByUsername(req.body.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      // Hash the password
+      const hashedPassword = await hashPassword(req.body.password);
+      
+      // Create the user
+      const newUser = await storage.createUser({
+        ...req.body,
+        password: hashedPassword,
+      });
+      
+      // Create user profile if profile data was provided
+      if (req.body.firstName || req.body.lastName || req.body.email || req.body.department || req.body.position) {
+        await storage.createUserProfile({
+          userId: newUser.id,
+          firstName: req.body.firstName || null,
+          lastName: req.body.lastName || null,
+          email: req.body.email || null,
+          department: req.body.department || null,
+          position: req.body.position || null,
+          about: null,
+          avatarUrl: null,
+        });
+      }
+      
+      // Return the user data without the password
+      const { password, ...userData } = newUser;
+      res.status(201).json(userData);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
   // Get all users (admin only)
   router.get("/admin/users", requireAdmin, async (req: Request, res: Response) => {
     try {
