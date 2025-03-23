@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { setupCoursesRoutes } from "./api/courses";
 import { setupQuizRoutes } from "./api/quiz";
 import { setupLLMRoutes } from "./api/llm";

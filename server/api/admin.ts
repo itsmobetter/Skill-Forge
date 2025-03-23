@@ -1,17 +1,7 @@
 import { Request, Response, Router } from "express";
 import { storage } from "../storage";
 import { insertUserSchema } from "@shared/schema";
-import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
-
-const scryptAsync = promisify(scrypt);
-
-// Function to hash a password
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
+import { hashPassword } from "../auth";
 
 export function setupAdminRoutes(router: Router, requireAuth: any, requireAdmin: any) {
   // Create new user (admin only)
