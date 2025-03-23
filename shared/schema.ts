@@ -37,8 +37,8 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
 export const apiConfigs = pgTable("api_configs", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
-  provider: text("provider").notNull(),
-  model: text("model").notNull(),
+  provider: text("provider").notNull(), // Now "Google" instead of "OpenAI"
+  model: text("model").notNull(), // Now "gemini-1.5-pro" instead of "gpt-4o"
   apiKey: text("api_key").notNull(),
   endpoint: text("endpoint"),
   temperature: integer("temperature").notNull(),

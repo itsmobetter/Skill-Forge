@@ -58,9 +58,9 @@ async function seedInitialData() {
       // Create API config for admin
       await storage.createApiConfig({
         userId: adminUser.id,
-        provider: "OpenAI",
-        model: "gpt-4o",
-        apiKey: process.env.OPENAI_API_KEY || "",
+        provider: "Google",
+        model: "gemini-1.5-pro",
+        apiKey: process.env.GEMINI_API_KEY || "",
         endpoint: "",
         temperature: 0.7,
         maxTokens: 1024,
@@ -226,9 +226,9 @@ async function seedInitialData() {
       // Create API config for regular user
       await storage.createApiConfig({
         userId: regularUser.id,
-        provider: "OpenAI",
-        model: "gpt-4o",
-        apiKey: process.env.OPENAI_API_KEY || "",
+        provider: "Google",
+        model: "gemini-1.5-pro",
+        apiKey: process.env.GEMINI_API_KEY || "",
         endpoint: "",
         temperature: 0.7,
         maxTokens: 1024,

@@ -275,29 +275,14 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         return res.status(400).json({ message: "Invalid YouTube URL" });
       }
       
-      // For a real implementation, we would use the YouTube API or OpenAI's Whisper API to get the transcript
-      // Here we'll generate a mock transcription
+      // For a real implementation, we would use the YouTube API or a transcription service
+      // Here we'll use Gemini to generate a simulated transcription
       
-      // Create OpenAI client
-      const openai = await getOpenAIClient(userId);
+      // Create Gemini client
+      const gemini = await getGeminiService(userId);
       
-      // Generate a relevant transcription based on video ID
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-        messages: [
-          {
-            role: "system",
-            content: `You are a transcription generator. Generate a realistic educational transcript for a YouTube video on the given topic. The transcript should be around 500-1000 words and focus on educational content.`
-          },
-          {
-            role: "user",
-            content: `Generate a realistic transcript for a YouTube video with ID: ${videoId}. Make it relevant to engineering education, quality assurance or similar topics.`
-          }
-        ],
-        temperature: 0.7
-      });
-      
-      const transcription = response.choices[0].message.content;
+      // Generate a simulated transcription based on video ID and topic inferring from quality/engineering
+      const transcription = await gemini.generateTranscription(`quality assurance, engineering education, ISO standards (YouTube video ID: ${videoId})`);
       
       // If a module ID is provided, save the transcription
       if (moduleId && transcription) {
