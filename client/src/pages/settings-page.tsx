@@ -18,7 +18,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Edit, UserPlus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 // Profile form schema
@@ -76,6 +77,12 @@ export default function SettingsPage() {
   // Fetch API configuration
   const { data: apiConfig, isLoading: isLoadingApiConfig } = useQuery({
     queryKey: ["/api/user/settings/api"],
+  });
+  
+  // Fetch all users (admin only)
+  const { data: allUsers, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ["/api/admin/users"],
+    enabled: user?.isAdmin === true,
   });
 
   // Profile form
@@ -755,6 +762,170 @@ export default function SettingsPage() {
                     )}
                   </div>
                 </TabsContent>
+                
+                {user?.isAdmin && (
+                  <TabsContent value="users" className="p-6">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium text-slate-900">User Management</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Manage user accounts and permissions in the system.
+                        </p>
+                      </div>
+                      
+                      <div className="bg-white overflow-hidden shadow rounded-lg">
+                        <div className="flex justify-between items-center p-4 border-b">
+                          <h4 className="text-base font-medium text-gray-900">All Users</h4>
+                          <Button size="sm" variant="outline">
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add User
+                          </Button>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  User
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Role
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Department
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Status
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {isLoadingUsers ? (
+                                <tr>
+                                  <td colSpan={5} className="px-6 py-4 text-center">
+                                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary-600" />
+                                  </td>
+                                </tr>
+                              ) : allUsers && allUsers.length > 0 ? (
+                                allUsers.map((userData) => {
+                                  // Find associated profile if available
+                                  const userProfile = userData.profile;
+                                  const initials = userProfile?.firstName && userProfile?.lastName 
+                                    ? `${userProfile.firstName.charAt(0)}${userProfile.lastName.charAt(0)}`
+                                    : userData.username.substring(0, 2).toUpperCase();
+                                  
+                                  return (
+                                    <tr key={userData.id}>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                          <div className="flex-shrink-0 h-10 w-10">
+                                            <Avatar>
+                                              <AvatarFallback>{initials}</AvatarFallback>
+                                            </Avatar>
+                                          </div>
+                                          <div className="ml-4">
+                                            <div className="text-sm font-medium text-gray-900">{userProfile?.firstName} {userProfile?.lastName}</div>
+                                            <div className="text-sm text-gray-500">{userProfile?.email || `@${userData.username}`}</div>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                          userData.isAdmin 
+                                            ? "bg-primary-100 text-primary-800" 
+                                            : "bg-gray-100 text-gray-800"
+                                        }`}>
+                                          {userData.isAdmin ? "Admin" : "User"}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {userProfile?.department || "—"}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                          Active
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <Button variant="ghost" size="sm">
+                                          <Edit className="h-4 w-4 mr-1" />
+                                          Edit
+                                        </Button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              ) : (
+                                <tr>
+                                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                                    No users found
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white overflow-hidden shadow rounded-lg">
+                        <div className="p-4 border-b">
+                          <h4 className="text-base font-medium text-gray-900">Global API Settings</h4>
+                          <p className="mt-1 text-sm text-slate-500">
+                            Configure API settings that will apply to all users in the system.
+                          </p>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center justify-between py-3 border-b">
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-900">Use admin API key for all users</h5>
+                              <p className="text-xs text-gray-500">
+                                When enabled, all users will use the admin's API configuration.
+                              </p>
+                            </div>
+                            <Switch 
+                              checked={true} 
+                              onCheckedChange={() => {}}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between py-3 border-b">
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-900">Allow users to configure their own API</h5>
+                              <p className="text-xs text-gray-500">
+                                When enabled, users can set their own API configuration.
+                              </p>
+                            </div>
+                            <Switch 
+                              checked={false} 
+                              onCheckedChange={() => {}}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between py-3">
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-900">Enable advanced LLM features</h5>
+                              <p className="text-xs text-gray-500">
+                                Enables PDF analysis and longer context.
+                              </p>
+                            </div>
+                            <Switch 
+                              checked={true} 
+                              onCheckedChange={() => {}}
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-gray-50 px-4 py-3 sm:px-6 flex justify-end">
+                          <Button size="sm">
+                            Save Global Settings
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                )}
               </Tabs>
             </Card>
           </div>
