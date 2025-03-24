@@ -305,20 +305,61 @@ export default function AdminCoursesPage() {
                           </FormItem>
                         )}
                       />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                         <FormField
                           control={courseForm.control}
                           name="imageUrl"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Course Image URL</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="https://example.com/image.jpg" />
-                              </FormControl>
+                              <FormLabel>Course Image</FormLabel>
+                              <div className="flex flex-col gap-4">
+                                {imagePreview ? (
+                                  <div className="relative w-full max-w-[300px] h-auto aspect-video overflow-hidden rounded-md border">
+                                    <img src={imagePreview} alt="Course preview" className="object-cover w-full h-full" />
+                                  </div>
+                                ) : field.value ? (
+                                  <div className="relative w-full max-w-[300px] h-auto aspect-video overflow-hidden rounded-md border">
+                                    <img src={field.value} alt="Course preview" className="object-cover w-full h-full" />
+                                  </div>
+                                ) : null}
+                                
+                                <div className="flex gap-2">
+                                  <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={triggerFileInput} 
+                                    className="flex items-center gap-2"
+                                  >
+                                    <ImagePlus className="h-4 w-4" />
+                                    {field.value ? "Change Image" : "Upload Image"}
+                                  </Button>
+                                  <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageUpload}
+                                    accept="image/*"
+                                    className="hidden"
+                                  />
+                                  
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      placeholder="Or enter image URL: https://example.com/image.jpg" 
+                                      className="flex-1"
+                                    />
+                                  </FormControl>
+                                </div>
+                              </div>
+                              <FormDescription>
+                                Upload an image (max 2MB) or provide a URL. Recommended size: 1280x720 pixels.
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={courseForm.control}
                           name="category"
@@ -344,6 +385,20 @@ export default function AdminCoursesPage() {
                                   <SelectItem value="fmea">FMEA</SelectItem>
                                 </SelectContent>
                               </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={courseForm.control}
+                          name="tag"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tag (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="e.g., New, Beginner-Friendly" />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -384,6 +439,62 @@ export default function AdminCoursesPage() {
                               <FormControl>
                                 <Input {...field} placeholder="e.g., 4 weeks" />
                               </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={courseForm.control}
+                          name="rating"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Rating (1-5)</FormLabel>
+                              <div className="flex items-center gap-2">
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    {...field} 
+                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                    min={1}
+                                    max={5}
+                                  />
+                                </FormControl>
+                                <div className="flex items-center">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star 
+                                      key={star}
+                                      className={`h-4 w-4 ${star <= field.value ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <FormDescription>
+                                Initial course rating (can be updated later)
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={courseForm.control}
+                          name="reviewCount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Review Count</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="number" 
+                                  {...field} 
+                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                  min={0}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                Initial number of reviews
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
