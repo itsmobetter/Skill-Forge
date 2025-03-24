@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Settings, User, LogOut, Menu } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -37,7 +38,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-slate-200">
+    <header className="bg-background shadow-sm border-b">
       <div className="flex justify-between items-center px-4 sm:px-6 lg:px-8 h-16">
         <div className="flex items-center">
           <Button 
@@ -49,7 +50,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <Link href="/" className="flex items-center">
-            <span className="text-primary-600 font-bold text-xl">Skill Forge</span>
+            <span className="text-foreground font-bold text-xl">Skill Forge</span>
           </Link>
         </div>
         
@@ -58,6 +59,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
             <Button variant="ghost" onClick={() => navigate("/about")}>
               About
             </Button>
+            <ThemeSwitcher />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

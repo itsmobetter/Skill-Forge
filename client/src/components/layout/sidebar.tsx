@@ -153,7 +153,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex-col flex lg:static lg:z-auto",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-background border-r flex-col flex lg:static lg:z-auto",
           isOpen ? "flex" : "hidden lg:flex"
         )}
       >
@@ -171,8 +171,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                     className={cn(
                       "w-full justify-start gap-3 font-medium",
                       location === item.href 
-                        ? "bg-primary-50 text-primary-700" 
-                        : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                        ? "bg-primary/10 text-primary" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     )}
                   >
                     {item.icon}
@@ -184,8 +184,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               {/* Admin Navigation Section */}
               {user?.isAdmin && (
                 <>
-                  <div className="pt-4 mt-4 border-t border-slate-200">
-                    <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <div className="pt-4 mt-4 border-t">
+                    <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Administration
                     </h3>
                     <div className="mt-3 space-y-1">
@@ -200,8 +200,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                             className={cn(
                               "w-full justify-start gap-3 font-medium",
                               location === item.href 
-                                ? "bg-primary-50 text-primary-700" 
-                                : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                                ? "bg-primary/10 text-primary" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                           >
                             {item.icon}
