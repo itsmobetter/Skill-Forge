@@ -200,12 +200,14 @@ export async function promoteSyafiqazrinToAdmin() {
       // Update user to be admin
       console.log("Promoting Syafiqazrin to admin...");
       
-      // Update directly in database for simplicity (would normally use a proper update function)
-      await storage.db.update(storage.users)
-        .set({ isAdmin: true })
-        .where(eq(storage.users.id, user.id));
-        
-      console.log("Syafiqazrin successfully promoted to admin status!");
+      // Use the storage interface method to update admin status
+      const success = await storage.updateUserAdminStatus(user.id, true);
+      
+      if (success) {
+        console.log("Syafiqazrin successfully promoted to admin status!");
+      } else {
+        console.log("Failed to promote Syafiqazrin to admin status.");
+      }
     } else if (user && user.isAdmin) {
       console.log("Syafiqazrin is already an admin.");
     } else {

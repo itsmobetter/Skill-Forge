@@ -179,6 +179,18 @@ export class MemStorage implements IStorage {
     this.users.set(userId, user);
     return true;
   }
+  
+  async updateUserAdminStatus(userId: number, isAdmin: boolean): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return false;
+    }
+    
+    // Update admin status
+    user.isAdmin = isAdmin;
+    this.users.set(userId, user);
+    return true;
+  }
 
   // User profile
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
@@ -592,6 +604,19 @@ export class DatabaseStorage implements IStorage {
     
     await db.update(users)
       .set({ password: newPassword })
+      .where(eq(users.id, userId));
+    
+    return true;
+  }
+  
+  async updateUserAdminStatus(userId: number, isAdmin: boolean): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      return false;
+    }
+    
+    await db.update(users)
+      .set({ isAdmin: isAdmin })
       .where(eq(users.id, userId));
     
     return true;
