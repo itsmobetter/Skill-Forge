@@ -19,9 +19,10 @@ const profileFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  bio: z.string().optional(),
-  organization: z.string().optional(),
-  jobTitle: z.string().optional(),
+  position: z.string().optional(),
+  department: z.string().optional(),
+  about: z.string().optional(),
+  avatarUrl: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -66,17 +67,19 @@ export default function ProfilePage() {
       firstName: profile?.firstName || "",
       lastName: profile?.lastName || "",
       email: profile?.email || "",
-      bio: profile?.bio || "",
-      organization: profile?.organization || "",
-      jobTitle: profile?.jobTitle || "",
+      position: profile?.position || "",
+      department: profile?.department || "",
+      about: profile?.about || "",
+      avatarUrl: profile?.avatarUrl || "",
     },
     values: {
       firstName: profile?.firstName || "",
       lastName: profile?.lastName || "",
       email: profile?.email || "",
-      bio: profile?.bio || "",
-      organization: profile?.organization || "",
-      jobTitle: profile?.jobTitle || "",
+      position: profile?.position || "",
+      department: profile?.department || "",
+      about: profile?.about || "",
+      avatarUrl: profile?.avatarUrl || "",
     },
   });
 
@@ -117,8 +120,9 @@ export default function ProfilePage() {
                 <div className="mt-4 text-center">
                   <h3 className="text-lg font-semibold">{user?.username}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {profile?.jobTitle ? `${profile.jobTitle} at ` : ""}
-                    {profile?.organization || ""}
+                    {profile?.position ? `${profile.position}` : ""}
+                    {profile?.position && profile?.department ? " at " : ""}
+                    {profile?.department || ""}
                   </p>
                 </div>
                 {user?.isAdmin && (
@@ -204,10 +208,10 @@ export default function ProfilePage() {
                         />
                         <FormField
                           control={form.control}
-                          name="jobTitle"
+                          name="position"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Job Title</FormLabel>
+                              <FormLabel>Position</FormLabel>
                               <FormControl>
                                 <Input {...field} />
                               </FormControl>
@@ -217,10 +221,10 @@ export default function ProfilePage() {
                         />
                         <FormField
                           control={form.control}
-                          name="organization"
+                          name="department"
                           render={({ field }) => (
                             <FormItem className="md:col-span-2">
-                              <FormLabel>Organization</FormLabel>
+                              <FormLabel>Department</FormLabel>
                               <FormControl>
                                 <Input {...field} />
                               </FormControl>
@@ -230,10 +234,10 @@ export default function ProfilePage() {
                         />
                         <FormField
                           control={form.control}
-                          name="bio"
+                          name="about"
                           render={({ field }) => (
                             <FormItem className="md:col-span-2">
-                              <FormLabel>Biography</FormLabel>
+                              <FormLabel>About</FormLabel>
                               <FormControl>
                                 <Textarea 
                                   {...field} 
@@ -280,17 +284,17 @@ export default function ProfilePage() {
                         <p className="mt-1">{profile.email || "Not set"}</p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-muted-foreground">Job Title</h3>
-                        <p className="mt-1">{profile.jobTitle || "Not set"}</p>
+                        <h3 className="text-sm font-medium text-muted-foreground">Position</h3>
+                        <p className="mt-1">{profile.position || "Not set"}</p>
                       </div>
                       <div className="md:col-span-2">
-                        <h3 className="text-sm font-medium text-muted-foreground">Organization</h3>
-                        <p className="mt-1">{profile.organization || "Not set"}</p>
+                        <h3 className="text-sm font-medium text-muted-foreground">Department</h3>
+                        <p className="mt-1">{profile.department || "Not set"}</p>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground">Bio</h3>
-                      <p className="mt-1 whitespace-pre-wrap">{profile.bio || "No biography provided."}</p>
+                      <h3 className="text-sm font-medium text-muted-foreground">About</h3>
+                      <p className="mt-1 whitespace-pre-wrap">{profile.about || "No information provided."}</p>
                     </div>
                   </div>
                 ) : (
