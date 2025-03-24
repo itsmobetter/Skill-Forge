@@ -6,6 +6,7 @@ import { setupQuizRoutes } from "./api/quiz";
 import { setupLLMRoutes } from "./api/llm";
 import { setupAdminRoutes } from "./api/admin";
 import { storage } from "./storage";
+import { seedDatabase } from "./seed";
 import express from "express";
 
 export async function registerRoutes(app: Express): Promise<Server> {
