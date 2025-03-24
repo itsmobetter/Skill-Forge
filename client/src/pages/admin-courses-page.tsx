@@ -60,7 +60,9 @@ export default function AdminCoursesPage() {
   const { toast } = useToast();
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
+  const [isEditModuleOpen, setIsEditModuleOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedModule, setSelectedModule] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState("courses");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +127,32 @@ export default function AdminCoursesPage() {
       toast({
         title: "Module added",
         description: "The module has been created successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Edit module mutation
+  const editModuleMutation = useMutation({
+    mutationFn: async (data: ModuleFormValues) => {
+      if (!selectedCourse || !selectedModule) throw new Error("No course or module selected");
+      const res = await apiRequest("PATCH", `/api/courses/${selectedCourse}/modules/${selectedModule.id}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", selectedCourse, "modules"] });
+      setIsEditModuleOpen(false);
+      setSelectedModule(null);
+      moduleForm.reset();
+      toast({
+        title: "Module updated",
+        description: "The module has been updated successfully.",
       });
     },
     onError: (error: Error) => {
@@ -306,6 +334,33 @@ export default function AdminCoursesPage() {
   const selectCourse = (courseId: string) => {
     setSelectedCourse(courseId);
     setActiveTab("modules");
+  };
+  
+  // Handle opening the edit module dialog
+  const openEditModuleDialog = (module: any) => {
+    setSelectedModule(module);
+    // Set form values for the selected module
+    moduleForm.reset({
+      title: module.title,
+      description: module.description,
+      order: module.order,
+      duration: module.duration,
+      videoUrl: module.videoUrl || "",
+    });
+    setIsEditModuleOpen(true);
+  };
+  
+  // Handle edit module submit
+  const onEditModuleSubmit = (data: ModuleFormValues) => {
+    if (!selectedCourse || !selectedModule) {
+      toast({
+        title: "Error",
+        description: "No module selected for editing",
+        variant: "destructive",
+      });
+      return;
+    }
+    editModuleMutation.mutate(data);
   };
 
   return (
