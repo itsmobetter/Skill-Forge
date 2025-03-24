@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, FileVideo, Upload, ImagePlus, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, FileVideo, Upload, ImagePlus, Star, Loader2 } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +64,12 @@ export default function AdminCoursesPage() {
   const [activeTab, setActiveTab] = useState("courses");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // States for confirmation dialogs
+  const [isDeleteCourseDialogOpen, setIsDeleteCourseDialogOpen] = useState(false);
+  const [isDeleteModuleDialogOpen, setIsDeleteModuleDialogOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
+  const [moduleToDelete, setModuleToDelete] = useState<string | null>(null);
 
   // Fetch courses
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
@@ -134,6 +150,29 @@ export default function AdminCoursesPage() {
       toast({
         title: "Course deleted",
         description: "The course has been deleted successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Delete module mutation
+  const deleteModuleMutation = useMutation({
+    mutationFn: async (moduleId: string) => {
+      if (!selectedCourse) throw new Error("No course selected");
+      const res = await apiRequest("DELETE", `/api/courses/${selectedCourse}/modules/${moduleId}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", selectedCourse, "modules"] });
+      toast({
+        title: "Module deleted",
+        description: "The module has been deleted successfully.",
       });
     },
     onError: (error: Error) => {
@@ -236,9 +275,17 @@ export default function AdminCoursesPage() {
     addModuleMutation.mutate(data);
   };
 
-  const handleDeleteCourse = (courseId: string) => {
-    if (confirm("Are you sure you want to delete this course? This action cannot be undone.")) {
-      deleteCourseMutation.mutate(courseId);
+  // Setup for delete course confirmation
+  const openDeleteCourseDialog = (courseId: string) => {
+    setCourseToDelete(courseId);
+    setIsDeleteCourseDialogOpen(true);
+  };
+
+  const handleDeleteCourse = () => {
+    if (courseToDelete) {
+      deleteCourseMutation.mutate(courseToDelete);
+      setIsDeleteCourseDialogOpen(false);
+      setCourseToDelete(null);
     }
   };
 
@@ -700,7 +747,7 @@ export default function AdminCoursesPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDeleteCourse(course.id)}
+                              onClick={() => openDeleteCourseDialog(course.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
@@ -813,6 +860,37 @@ export default function AdminCoursesPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Course Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeleteCourseDialogOpen} 
+        onOpenChange={setIsDeleteCourseDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the course and all associated data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCourseToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteCourse}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteCourseMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
