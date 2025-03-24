@@ -91,6 +91,33 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       ),
     },
   ];
+  
+  const adminNavItems = [
+    {
+      title: "Manage Courses",
+      href: "/admin/courses",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+          <path d="M15 2H9a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z" />
+          <path d="M9 12h6" />
+          <path d="M9 16h6" />
+        </svg>
+      ),
+    },
+    {
+      title: "User Management",
+      href: "/admin/users",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      ),
+    },
+  ];
 
   // Close sidebar on mobile when clicking a link
   const handleLinkClick = () => {
@@ -139,6 +166,39 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                   </Button>
                 </Link>
               ))}
+
+              {/* Admin Navigation Section */}
+              {user?.isAdmin && (
+                <>
+                  <div className="pt-4 mt-4 border-t border-slate-200">
+                    <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Administration
+                    </h3>
+                    <div className="mt-3 space-y-1">
+                      {adminNavItems.map((item) => (
+                        <Link 
+                          key={item.href} 
+                          href={item.href}
+                          onClick={handleLinkClick}
+                        >
+                          <Button
+                            variant="ghost"
+                            className={cn(
+                              "w-full justify-start gap-3 font-medium",
+                              location === item.href 
+                                ? "bg-primary-50 text-primary-700" 
+                                : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                            )}
+                          >
+                            {item.icon}
+                            {item.title}
+                          </Button>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </nav>
           </ScrollArea>
           
