@@ -265,7 +265,7 @@ export default function AdminCoursesPage() {
                   Add Course
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add New Course</DialogTitle>
                   <DialogDescription>
@@ -522,7 +522,7 @@ export default function AdminCoursesPage() {
                     Add Module
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Add New Module</DialogTitle>
                     <DialogDescription>

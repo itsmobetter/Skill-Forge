@@ -82,6 +82,8 @@ export const courses = pgTable("courses", {
   rating: integer("rating").notNull(),
   reviewCount: integer("review_count").notNull(),
   duration: text("duration").notNull(),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertCourseSchema = createInsertSchema(courses).omit({
