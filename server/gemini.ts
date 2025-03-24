@@ -6,6 +6,7 @@ interface GeminiService {
   generateChatResponse: (messages: { role: string; content: string }[], context?: string) => Promise<string>;
   generateQuizQuestions: (content: string, numQuestions?: number) => Promise<any>;
   summarizeText: (text: string) => Promise<string>;
+  generateStructuredContent: (prompt: string, systemInstruction: string) => Promise<any>;
 }
 
 export function createGeminiService(config: ApiConfig): GeminiService {
@@ -161,6 +162,50 @@ export function createGeminiService(config: ApiConfig): GeminiService {
       } catch (error) {
         console.error("Error summarizing text with Gemini:", error);
         throw new Error(`Failed to summarize text: ${error.message}`);
+      }
+    },
+    
+    generateStructuredContent: async (prompt: string, systemInstruction: string): Promise<any> => {
+      try {
+        // Combine system instruction and prompt
+        const fullPrompt = `${systemInstruction}\n\n${prompt}`;
+        
+        // Generate content with structured output focus
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+          generationConfig: {
+            temperature: 0.2, // Lower temperature for more structured output
+            maxOutputTokens: 1024,
+          },
+        });
+
+        const responseText = result.response.text();
+        
+        // Attempt to extract JSON from the response
+        try {
+          // Look for JSON array or object in the response
+          const jsonMatch = responseText.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+          }
+          
+          // If no JSON found but response looks like it might be JSON
+          if (responseText.includes('{') || responseText.includes('[')) {
+            console.warn("Response contains JSON-like content but couldn't be parsed directly");
+            // Just return the text for manual handling
+            return responseText;
+          }
+          
+          // No JSON found at all
+          console.warn("No structured content detected in response");
+          return null;
+        } catch (parseError) {
+          console.error("Error parsing structured content:", parseError);
+          throw new Error(`Failed to parse structured content: ${parseError.message}`);
+        }
+      } catch (error) {
+        console.error("Error generating structured content with Gemini:", error);
+        throw new Error(`Failed to generate structured content: ${error.message}`);
       }
     },
   };
