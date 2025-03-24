@@ -288,6 +288,20 @@ export default function AdminCoursesPage() {
       setCourseToDelete(null);
     }
   };
+  
+  // Setup for delete module confirmation
+  const openDeleteModuleDialog = (moduleId: string) => {
+    setModuleToDelete(moduleId);
+    setIsDeleteModuleDialogOpen(true);
+  };
+
+  const handleDeleteModule = () => {
+    if (moduleToDelete) {
+      deleteModuleMutation.mutate(moduleToDelete);
+      setIsDeleteModuleDialogOpen(false);
+      setModuleToDelete(null);
+    }
+  };
 
   const selectCourse = (courseId: string) => {
     setSelectedCourse(courseId);
@@ -840,9 +854,7 @@ export default function AdminCoursesPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => {
-                                      // Delete module functionality
-                                    }}
+                                    onClick={() => openDeleteModuleDialog(module.id)}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                     <span className="sr-only">Delete</span>
@@ -880,6 +892,37 @@ export default function AdminCoursesPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteCourseMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete Module Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeleteModuleDialogOpen} 
+        onOpenChange={setIsDeleteModuleDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the module and all associated data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setModuleToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteModule}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteModuleMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...
