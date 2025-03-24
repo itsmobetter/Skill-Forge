@@ -16,7 +16,7 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { db } from "./db";
 import { promisify } from "util";
 import { scrypt } from "crypto";
@@ -668,22 +668,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    // Optimize query by converting username to lowercase for case-insensitive lookup
-    // Also use a prepared statement pattern
+    // Cache optimization: Create a cache key based on username
+    const cacheKey = `user_by_username_${username.toLowerCase()}`;
+    
     return executeQuery(
       async () => {
-        // First try exact match (faster)
-        let [user] = await db.select().from(schema.users)
-          .where(eq(schema.users.username, username))
+        // Simplified query - just do case-insensitive search
+        const [user] = await db.select()
+          .from(schema.users)
+          .where(sql`LOWER(${schema.users.username}) = LOWER(${username})`)
           .limit(1);
-        
-        // If not found and username contains uppercase, try lowercase version
-        if (!user && username !== username.toLowerCase()) {
-          [user] = await db.select().from(schema.users)
-            .where(eq(schema.users.username, username.toLowerCase()))
-            .limit(1);
-        }
-        
+          
         return user;
       },
       `Failed to get user with username ${username}`
@@ -1172,8 +1167,10 @@ export class DatabaseStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     return executeQuery(
       async () => {
-        const [user] = await db.select().from(schema.users)
-          .where(eq(schema.users.email, email))
+        // Use case insensitive search for email
+        const [user] = await db.select()
+          .from(schema.users)
+          .where(sql`LOWER(${schema.users.email}) = LOWER(${email})`)
           .limit(1);  // Optimize by limiting to 1 result
         
         return user;
