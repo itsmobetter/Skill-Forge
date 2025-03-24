@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { setupCoursesRoutes } from "./api/courses";
@@ -24,6 +24,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount API router
   app.use("/api", apiRouter);
+
+  // Route to clear sessions (helpful after database resets)
+  app.post("/api/clear-sessions", (req: Request, res: Response) => {
+    // Destroy user's own session
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return res.status(500).json({ error: "Failed to clear session" });
+        }
+        
+        res.clearCookie("connect.sid");
+        return res.status(200).json({ message: "Session cleared successfully" });
+      });
+    } else {
+      res.status(200).json({ message: "No active session" });
+    }
+  });
 
   // Seed initial data if database is empty
   await seedInitialData();
@@ -68,7 +86,7 @@ async function seedInitialData() {
         model: "gemini-1.5-flash",
         apiKey: process.env.GEMINI_API_KEY || "",
         endpoint: "",
-        temperature: 0.7,
+        temperature: 0.7, // temperature parameter is stored as a 'real' type in PostgreSQL
         maxTokens: 1024,
         useTranscriptions: true,
         usePdf: true,
