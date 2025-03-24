@@ -239,6 +239,51 @@ async function seedInitialData() {
         streaming: true
       });
 
+      // Create additional quality assurance courses
+      await storage.createCourse({
+        title: "Measurement System Analysis (MSA)",
+        description: "Learn how to evaluate the measurement system's variation and its impact on decision making.",
+        imageUrl: "https://images.unsplash.com/photo-1507832321772-e86cc0452e9c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+        tag: "Popular",
+        tagColor: "secondary",
+        rating: 4.7,
+        reviewCount: 82,
+        duration: "5 hours"
+      });
+
+      await storage.createCourse({
+        title: "Root Cause Analysis & 8D Problem Solving",
+        description: "Master the 8 Disciplines approach to identify and eliminate the root causes of quality issues.",
+        imageUrl: "https://images.unsplash.com/photo-1569078449082-26d12c5f1669?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+        tag: "Beginner",
+        tagColor: "green",
+        rating: 4.5,
+        reviewCount: 73,
+        duration: "4 hours"
+      });
+
+      await storage.createCourse({
+        title: "Design of Experiments (DOE)",
+        description: "Understand structured experimentation methods to optimize products and processes.",
+        imageUrl: "https://images.unsplash.com/photo-1576153192396-180ecef2a715?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+        tag: "Advanced",
+        tagColor: "orange",
+        rating: 4.9,
+        reviewCount: 56,
+        duration: "10 hours"
+      });
+
+      await storage.createCourse({
+        title: "Failure Mode and Effects Analysis (FMEA)",
+        description: "Learn systematic approaches to identify potential failures in design and manufacturing processes.",
+        imageUrl: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
+        tag: "New",
+        tagColor: "primary",
+        rating: 4.8,
+        reviewCount: 64,
+        duration: "6 hours"
+      });
+
       console.log("Initial data seeded successfully");
     }
   } catch (error) {
