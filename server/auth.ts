@@ -63,9 +63,15 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
+      // If user doesn't exist anymore (e.g., after DB reset), just return null instead of error
+      if (!user) {
+        console.log(`User with id ${id} not found during deserialization`);
+        return done(null, null);
+      }
       done(null, user);
     } catch (error) {
-      done(error);
+      console.error("Error during user deserialization:", error);
+      done(null, null); // Return null instead of propagating the error
     }
   });
 
@@ -135,7 +141,11 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log("Authentication status:", req.isAuthenticated());
+    if (!req.isAuthenticated()) {
+      console.log("User not authenticated, returning 401");
+      return res.sendStatus(401);
+    }
     console.log("User data from /api/user:", req.user);
     res.json(req.user);
   });
