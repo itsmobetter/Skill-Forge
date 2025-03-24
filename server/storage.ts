@@ -1162,14 +1162,14 @@ export class DatabaseStorage implements IStorage {
 
   // Transcriptions
   async getModuleTranscription(moduleId: string): Promise<ModuleTranscription | undefined> {
-    const [transcription] = await db.select().from(moduleTranscriptions)
-      .where(eq(moduleTranscriptions.moduleId, moduleId));
+    const [transcription] = await db.select().from(schema.moduleTranscriptions)
+      .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
     
     return transcription;
   }
 
   async createModuleTranscription(transcription: InsertModuleTranscription): Promise<ModuleTranscription> {
-    const [newTranscription] = await db.insert(moduleTranscriptions)
+    const [newTranscription] = await db.insert(schema.moduleTranscriptions)
       .values(transcription)
       .returning();
     
@@ -1177,14 +1177,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateModuleTranscription(id: number, transcriptionUpdate: Partial<ModuleTranscription>): Promise<ModuleTranscription> {
-    const [existingTranscription] = await db.select().from(moduleTranscriptions).where(eq(moduleTranscriptions.id, id));
+    const [existingTranscription] = await db.select().from(schema.moduleTranscriptions).where(eq(schema.moduleTranscriptions.id, id));
     if (!existingTranscription) {
       throw new Error("Transcription not found");
     }
 
-    const [updatedTranscription] = await db.update(moduleTranscriptions)
+    const [updatedTranscription] = await db.update(schema.moduleTranscriptions)
       .set(transcriptionUpdate)
-      .where(eq(moduleTranscriptions.id, id))
+      .where(eq(schema.moduleTranscriptions.id, id))
       .returning();
     
     return updatedTranscription;
@@ -1192,16 +1192,16 @@ export class DatabaseStorage implements IStorage {
 
   // Chat interactions
   async getChatInteractions(userId: number, courseId: string): Promise<ChatInteraction[]> {
-    return await db.select().from(chatInteractions)
+    return await db.select().from(schema.chatInteractions)
       .where(and(
-        eq(chatInteractions.userId, userId),
-        eq(chatInteractions.courseId, courseId)
+        eq(schema.chatInteractions.userId, userId),
+        eq(schema.chatInteractions.courseId, courseId)
       ))
-      .orderBy(desc(chatInteractions.timestamp));
+      .orderBy(desc(schema.chatInteractions.timestamp));
   }
 
   async createChatInteraction(interaction: InsertChatInteraction): Promise<ChatInteraction> {
-    const [newInteraction] = await db.insert(chatInteractions)
+    const [newInteraction] = await db.insert(schema.chatInteractions)
       .values(interaction)
       .returning();
     
