@@ -117,6 +117,20 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         </svg>
       ),
     },
+    {
+      title: "API Configuration",
+      href: "/admin/api-config",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <path d="M12.9 7.1C13.9 7.1 14.7 7.9 14.7 8.9C14.7 9.9 13.9 10.7 12.9 10.7" />
+          <path d="M15.2 13.9v.7" />
+          <path d="M9.7 13.9v.8" />
+          <path d="M12.9 10.7H9.7C8.7 10.7 7.9 9.9 7.9 8.9C7.9 7.9 8.7 7.1 9.7 7.1" />
+          <path d="M13.5 13.9h-4" />
+          <path d="M20 4v16.8c0 .7-.6 1.2-1.3 1.2H5.3c-.7 0-1.3-.5-1.3-1.2V4c0-.7.6-1.2 1.3-1.2h13.4c.7 0 1.3.5 1.3 1.2Z" />
+        </svg>
+      ),
+    },
   ];
 
   // Close sidebar on mobile when clicking a link

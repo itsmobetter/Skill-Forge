@@ -312,12 +312,7 @@ export default function SettingsPage() {
                     >
                       Password
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="api" 
-                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary-500 data-[state=active]:text-primary-600 rounded-none"
-                    >
-                      API Configuration
-                    </TabsTrigger>
+
                     {user?.isAdmin && (
                       <TabsTrigger 
                         value="users" 
