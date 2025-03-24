@@ -14,15 +14,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { insertUserSchema } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
-const loginSchema = insertUserSchema.pick({
-  username: true,
-  password: true,
+const loginSchema = z.object({
+  username: z.string().min(1, "Username or email is required"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const registerSchema = insertUserSchema.extend({
-  confirmPassword: z.string(),
+  email: z.string().email("Invalid email format").min(1, "Email is required"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -56,6 +57,7 @@ export default function AuthPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
+      email: "",
       password: "",
       confirmPassword: "",
     },
@@ -134,9 +136,9 @@ export default function AuthPage() {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username</FormLabel>
+                          <FormLabel>Username or Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your username" {...field} />
+                            <Input placeholder="Enter your username or email" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -187,6 +189,19 @@ export default function AuthPage() {
                           <FormLabel>Username</FormLabel>
                           <FormControl>
                             <Input placeholder="Choose a username" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="Enter your email" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
