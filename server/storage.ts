@@ -916,9 +916,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createModule(module: InsertModule): Promise<Module> {
-    const id = Math.random().toString(36).substring(2, 11);
-    const [newModule] = await db.insert(modules).values({...module, id}).returning();
-    return newModule;
+    return executeQuery(
+      async () => {
+        const id = Math.random().toString(36).substring(2, 11);
+        const [newModule] = await db.insert(schema.modules).values({...module, id}).returning();
+        return newModule;
+      },
+      "Failed to create module"
+    );
   }
 
   async updateModule(id: string, moduleUpdate: Partial<Module>): Promise<Module> {

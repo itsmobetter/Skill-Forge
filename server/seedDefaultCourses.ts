@@ -11,7 +11,7 @@ export const defaultCourses: Omit<InsertCourse, 'id'>[] = [
     duration: '8 hours',
     tag: 'Quality Management',
     tagColor: '#4CAF50',
-    rating: 4.8,
+    rating: 5,  // Converted from 4.8 to integer
     reviewCount: 128,
     deleted: false,
     deletedAt: null
@@ -23,7 +23,7 @@ export const defaultCourses: Omit<InsertCourse, 'id'>[] = [
     duration: '10 hours',
     tag: 'Statistical Methods',
     tagColor: '#2196F3',
-    rating: 4.7,
+    rating: 5,  // Converted from 4.7 to integer
     reviewCount: 96,
     deleted: false,
     deletedAt: null
@@ -35,7 +35,7 @@ export const defaultCourses: Omit<InsertCourse, 'id'>[] = [
     duration: '6 hours',
     tag: 'Quality Control',
     tagColor: '#FF9800',
-    rating: 4.9,
+    rating: 5,  // Converted from 4.9 to integer
     reviewCount: 74,
     deleted: false,
     deletedAt: null
@@ -47,7 +47,7 @@ export const defaultCourses: Omit<InsertCourse, 'id'>[] = [
     duration: '5 hours',
     tag: 'Quality Basics',
     tagColor: '#9C27B0',
-    rating: 4.6,
+    rating: 5,  // Converted from 4.6 to integer
     reviewCount: 112,
     deleted: false,
     deletedAt: null
@@ -59,7 +59,7 @@ export const defaultCourses: Omit<InsertCourse, 'id'>[] = [
     duration: '12 hours',
     tag: 'Advanced Statistics',
     tagColor: '#E91E63',
-    rating: 4.8,
+    rating: 5,  // Converted from 4.8 to integer
     reviewCount: 86,
     deleted: false,
     deletedAt: null
@@ -105,7 +105,6 @@ export const getISOModules = (courseId: string): Omit<InsertModule, 'id'>[] => [
     objectives: ['Implement the process approach', 'Apply PDCA methodology', 'Design process maps for organization']
   },
   {
-    id: nanoid(),
     courseId,
     title: 'Risk-Based Thinking',
     description: 'Implementing risk-based thinking in your quality management system to prevent issues.',
@@ -118,7 +117,6 @@ export const getISOModules = (courseId: string): Omit<InsertModule, 'id'>[] => [
     objectives: ['Identify organizational risks and opportunities', 'Develop risk mitigation strategies', 'Integrate risk-based thinking into processes']
   },
   {
-    id: nanoid(),
     courseId,
     title: 'Documentation Requirements',
     description: 'Understanding the documentation requirements for ISO 9001:2015 compliance.',
@@ -133,9 +131,8 @@ export const getISOModules = (courseId: string): Omit<InsertModule, 'id'>[] => [
 ];
 
 // Modules for the SPC course
-export const getSPCModules = (courseId: string): InsertModule[] => [
+export const getSPCModules = (courseId: string): Omit<InsertModule, 'id'>[] => [
   {
-    id: nanoid(),
     courseId,
     title: 'Fundamentals of Statistics in Quality Control',
     description: 'Introduction to statistical concepts used in quality control and process monitoring.',
@@ -148,7 +145,6 @@ export const getSPCModules = (courseId: string): InsertModule[] => [
     objectives: ['Understand basic statistical principles', 'Learn data collection methods', 'Apply statistical thinking to processes']
   },
   {
-    id: nanoid(),
     courseId,
     title: 'Variable Control Charts',
     description: 'Creating and interpreting variable control charts for continuous data.',
@@ -161,7 +157,6 @@ export const getSPCModules = (courseId: string): InsertModule[] => [
     objectives: ['Create X-bar and R charts', 'Interpret patterns and trends', 'Apply control limits properly']
   },
   {
-    id: nanoid(),
     courseId,
     title: 'Attribute Control Charts',
     description: 'Understanding and using attribute control charts for discrete data.',
@@ -174,7 +169,6 @@ export const getSPCModules = (courseId: string): InsertModule[] => [
     objectives: ['Create p-charts and c-charts', 'Analyze attribute data properly', 'Choose appropriate chart types']
   },
   {
-    id: nanoid(),
     courseId,
     title: 'Process Capability Analysis',
     description: 'Measuring and analyzing process capability using statistical methods.',
@@ -187,7 +181,6 @@ export const getSPCModules = (courseId: string): InsertModule[] => [
     objectives: ['Calculate process capability indices', 'Interpret capability results', 'Improve process capability']
   },
   {
-    id: nanoid(),
     courseId,
     title: 'Implementing SPC in Your Organization',
     description: 'Practical guide to implementing Statistical Process Control in manufacturing environments.',
@@ -202,9 +195,8 @@ export const getSPCModules = (courseId: string): InsertModule[] => [
 ];
 
 // Materials for the ISO 9001 course
-export const getISOMaterials = (courseId: string): InsertMaterial[] => [
+export const getISOMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] => [
   {
-    id: nanoid(),
     courseId,
     type: 'pdf',
     title: 'ISO 9001:2015 Standard Overview',
@@ -213,7 +205,6 @@ export const getISOMaterials = (courseId: string): InsertMaterial[] => [
     fileSize: '2.4 MB'
   },
   {
-    id: nanoid(),
     courseId,
     type: 'pdf',
     title: 'Quality Management Principles Guide',
@@ -222,7 +213,6 @@ export const getISOMaterials = (courseId: string): InsertMaterial[] => [
     fileSize: '3.8 MB'
   },
   {
-    id: nanoid(),
     courseId,
     type: 'pdf',
     title: 'Process Mapping Templates',
@@ -231,7 +221,6 @@ export const getISOMaterials = (courseId: string): InsertMaterial[] => [
     fileSize: '1.5 MB'
   },
   {
-    id: nanoid(),
     courseId,
     type: 'pdf',
     title: 'Risk Assessment Worksheets',
@@ -242,9 +231,8 @@ export const getISOMaterials = (courseId: string): InsertMaterial[] => [
 ];
 
 // Materials for the SPC course
-export const getSPCMaterials = (courseId: string): InsertMaterial[] => [
+export const getSPCMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] => [
   {
-    id: nanoid(),
     courseId,
     type: 'pdf',
     title: 'Statistical Process Control Handbook',
@@ -253,7 +241,6 @@ export const getSPCMaterials = (courseId: string): InsertMaterial[] => [
     fileSize: '4.2 MB'
   },
   {
-    id: nanoid(),
     courseId,
     type: 'pdf',
     title: 'Control Chart Templates',
@@ -262,7 +249,6 @@ export const getSPCMaterials = (courseId: string): InsertMaterial[] => [
     fileSize: '1.8 MB'
   },
   {
-    id: nanoid(),
     courseId,
     type: 'pdf',
     title: 'Case Studies in SPC Implementation',
