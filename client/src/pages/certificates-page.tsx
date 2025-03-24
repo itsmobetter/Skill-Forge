@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 
 // Interface for a certificate
 interface Certificate {
@@ -124,68 +125,70 @@ export default function CertificatesPage() {
   );
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">My Certificates</h1>
-        <p className="text-slate-500 mt-1">
-          View and download your earned certificates
-        </p>
-      </div>
-
-      <div className="mb-6">
-        <Input
-          type="text"
-          placeholder="Search certificates..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md"
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <Skeleton className="h-48" />
-              <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <Skeleton className="h-10" />
-                  <Skeleton className="h-10" />
-                </div>
-                <Skeleton className="h-10" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredCertificates && filteredCertificates.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCertificates.map(renderCertificateCard)}
-        </div>
-      ) : (
-        <div className="text-center p-12">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-16 w-16 mx-auto text-slate-300"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1}
-              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-            />
-          </svg>
-          <h3 className="mt-4 text-lg font-medium">No certificates found</h3>
-          <p className="mt-1 text-slate-500">
-            {searchTerm 
-              ? `No certificates matching "${searchTerm}"`
-              : "Complete courses to earn certificates."
-            }
+    <DashboardLayout>
+      <div className="container mx-auto py-6 px-4 sm:px-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">My Certificates</h1>
+          <p className="text-slate-500 mt-1">
+            View and download your earned certificates
           </p>
         </div>
-      )}
-    </div>
+
+        <div className="mb-6">
+          <Input
+            type="text"
+            placeholder="Search certificates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <Skeleton className="h-48" />
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <Skeleton className="h-10" />
+                    <Skeleton className="h-10" />
+                  </div>
+                  <Skeleton className="h-10" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredCertificates && filteredCertificates.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCertificates.map(renderCertificateCard)}
+          </div>
+        ) : (
+          <div className="text-center p-12">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-16 w-16 mx-auto text-slate-300"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1}
+                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+              />
+            </svg>
+            <h3 className="mt-4 text-lg font-medium">No certificates found</h3>
+            <p className="mt-1 text-slate-500">
+              {searchTerm 
+                ? `No certificates matching "${searchTerm}"`
+                : "Complete courses to earn certificates."
+              }
+            </p>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }
