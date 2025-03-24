@@ -4,6 +4,27 @@ import { z } from "zod";
 import { insertCourseSchema, insertModuleSchema, insertMaterialSchema, insertCourseProgressSchema } from "@shared/schema";
 
 export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmin: any) {
+  // Get module transcription
+  router.get("/modules/:moduleId/transcription", async (req: Request, res: Response) => {
+    try {
+      const { moduleId } = req.params;
+      
+      if (!moduleId) {
+        return res.status(400).json({ message: "Module ID is required" });
+      }
+      
+      const transcription = await storage.getModuleTranscription(moduleId);
+      
+      if (!transcription) {
+        return res.status(404).json({ message: "No transcription found for this module" });
+      }
+      
+      res.json(transcription);
+    } catch (error) {
+      console.error("Error fetching module transcription:", error);
+      res.status(500).json({ message: "Failed to fetch module transcription" });
+    }
+  });
   // Get all courses
   router.get("/courses", async (req: Request, res: Response) => {
     try {

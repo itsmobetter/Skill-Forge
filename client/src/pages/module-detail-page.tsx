@@ -1,0 +1,318 @@
+import React, { useState, useEffect } from 'react';
+import { useRoute } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { Loader2, BookOpen, Video, File, CheckCircle, Circle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TranscriptViewer } from '@/components/module/transcript-viewer';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { Module, Course, Material } from '@shared/schema';
+
+export default function ModuleDetailPage() {
+  const [_, params] = useRoute('/courses/:courseId/modules/:moduleId');
+  const { courseId, moduleId } = params || {};
+  const [activeTab, setActiveTab] = useState('video');
+  const { toast } = useToast();
+
+  // Fetch module details
+  const { data: module, isLoading: isLoadingModule } = useQuery<Module>({
+    queryKey: ['/api/courses', courseId, 'modules', moduleId],
+    queryFn: async () => {
+      if (!courseId || !moduleId) return null;
+      const res = await apiRequest('GET', `/api/courses/${courseId}/modules/${moduleId}`);
+      return res.json();
+    },
+    enabled: !!courseId && !!moduleId
+  });
+
+  // Fetch course details
+  const { data: course } = useQuery<Course>({
+    queryKey: ['/api/courses', courseId],
+    queryFn: async () => {
+      if (!courseId) return null;
+      const res = await apiRequest('GET', `/api/courses/${courseId}`);
+      return res.json();
+    },
+    enabled: !!courseId
+  });
+
+  // Fetch module materials
+  const { data: materials } = useQuery<Material[]>({
+    queryKey: ['/api/courses', courseId, 'materials'],
+    queryFn: async () => {
+      if (!courseId) return [];
+      const res = await apiRequest('GET', `/api/courses/${courseId}/materials`);
+      return res.json();
+    },
+    enabled: !!courseId
+  });
+
+  // Update module progress
+  const updateProgress = async (progress: number) => {
+    try {
+      if (!courseId || !moduleId) return;
+      
+      await apiRequest('POST', `/api/courses/${courseId}/modules/${moduleId}/progress`, {
+        progress
+      });
+      
+      if (progress === 100) {
+        toast({
+          title: 'Module Completed',
+          description: 'You have successfully completed this module.',
+        });
+      } else {
+        toast({
+          title: 'Progress Updated',
+          description: `Progress updated to ${progress}%`,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      toast({
+        title: 'Update Failed',
+        description: 'Failed to update progress',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Format the YouTube video URL for embedding
+  const getEmbedUrl = (videoUrl: string) => {
+    if (!videoUrl) return '';
+    
+    // Extract video ID from various YouTube URL formats
+    const regExp = /^.*(youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]*).*/;
+    const match = videoUrl.match(regExp);
+    
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}?autoplay=0&rel=0`;
+    }
+    
+    return videoUrl; // Return original if not a valid YouTube URL
+  };
+
+  // Filter materials for the current module
+  const moduleMaterials = materials?.filter(
+    material => material.moduleId === moduleId
+  ) || [];
+
+  // Handle tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  // Mark module as complete
+  const markAsComplete = () => {
+    updateProgress(100);
+  };
+
+  if (isLoadingModule) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-200px)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!module || !courseId) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="text-center py-10">
+          <h1 className="text-2xl font-bold">Module Not Found</h1>
+          <p className="mt-4">The module you're looking for doesn't exist or you don't have access to it.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">{module.title}</h1>
+        {course && (
+          <p className="text-muted-foreground mt-1">Course: {course.title}</p>
+        )}
+        {module.description && (
+          <p className="mt-4 text-lg">{module.description}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="video" className="flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                Video
+              </TabsTrigger>
+              <TabsTrigger value="materials" className="flex items-center gap-2">
+                <File className="h-4 w-4" />
+                Materials
+              </TabsTrigger>
+              <TabsTrigger value="transcript" className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Transcript
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="video" className="mt-4">
+              {module.videoUrl ? (
+                <div className="rounded-lg overflow-hidden aspect-video">
+                  <iframe
+                    className="w-full h-full"
+                    src={getEmbedUrl(module.videoUrl)}
+                    title={module.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              ) : (
+                <div className="bg-muted rounded-lg p-8 text-center h-[400px] flex items-center justify-center">
+                  <div>
+                    <p className="text-muted-foreground">No video available for this module</p>
+                    {module.hasQuiz && (
+                      <Button variant="outline" className="mt-4">
+                        Take Quiz
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="materials" className="mt-4">
+              {moduleMaterials.length > 0 ? (
+                <div className="space-y-4">
+                  {moduleMaterials.map((material) => (
+                    <Card key={material.id}>
+                      <CardHeader>
+                        <CardTitle>{material.title}</CardTitle>
+                        {material.description && (
+                          <CardDescription>{material.description}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => window.open(material.url, '_blank')}
+                          className="w-full sm:w-auto"
+                        >
+                          View Material
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-muted rounded-lg p-8 text-center h-[300px] flex items-center justify-center">
+                  <p className="text-muted-foreground">No materials available for this module</p>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="transcript" className="mt-4">
+              <TranscriptViewer moduleId={moduleId} videoUrl={module.videoUrl} />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Module Progress</CardTitle>
+              <CardDescription>Track your progress through this module</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="mr-2">
+                      {module.completed ? (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span>Watch Video</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => updateProgress(30)}
+                  >
+                    Mark watched
+                  </Button>
+                </div>
+                
+                {moduleMaterials.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="mr-2">
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span>Review Materials</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updateProgress(60)}
+                    >
+                      Mark reviewed
+                    </Button>
+                  </div>
+                )}
+                
+                {module.hasQuiz && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="mr-2">
+                        <Circle className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <span>Complete Quiz</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveTab('quiz')}
+                    >
+                      Take quiz
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                className="w-full" 
+                onClick={markAsComplete}
+              >
+                Mark Module as Complete
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {/* AI Assistant Card */}
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>AI Learning Assistant</CardTitle>
+              <CardDescription>Ask questions about this module</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => window.location.href = `/courses/${courseId}/chat?module=${moduleId}`}
+              >
+                Ask a Question
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
