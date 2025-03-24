@@ -5,6 +5,7 @@ import { setupCoursesRoutes } from "./api/courses";
 import { setupQuizRoutes } from "./api/quiz";
 import { setupLLMRoutes } from "./api/llm";
 import { setupAdminRoutes } from "./api/admin";
+import { setupCertificateRoutes } from "./api/certificates";
 import { storage } from "./storage";
 import { seedDatabase, promoteSyafiqazrinToAdmin } from "./seed";
 import express from "express";
@@ -21,6 +22,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupQuizRoutes(apiRouter, requireAuth, requireAdmin);
   setupLLMRoutes(apiRouter, requireAuth);
   setupAdminRoutes(apiRouter, requireAuth, requireAdmin);
+  setupCertificateRoutes(apiRouter, requireAuth, requireAdmin);
 
   // Mount API router
   app.use("/api", apiRouter);

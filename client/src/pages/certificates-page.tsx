@@ -25,34 +25,9 @@ export default function CertificatesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const isMobile = useIsMobile();
 
-  // This would fetch certificates in a real implementation
+  // Fetch certificates from the API
   const { data: certificates, isLoading } = useQuery<Certificate[]>({
     queryKey: ["/api/user/certificates"],
-    // Using placeholder data since API endpoint doesn't exist yet
-    queryFn: async () => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return [
-        {
-          id: "cert-1",
-          courseId: "course-1",
-          courseName: "ISO 9001 Quality Management Systems",
-          issuedDate: "2023-11-12",
-          expiryDate: "2026-11-12",
-          credentialId: "ISO-9001-QMS-2023-001",
-          thumbnailUrl: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-        },
-        {
-          id: "cert-2",
-          courseId: "course-2",
-          courseName: "Statistical Process Control (SPC)",
-          issuedDate: "2023-12-15",
-          expiryDate: null,
-          credentialId: "SPC-ADV-2023-042",
-          thumbnailUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-        }
-      ];
-    },
   });
 
   // Filter certificates based on search term
