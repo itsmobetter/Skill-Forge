@@ -12,6 +12,8 @@ import SettingsPage from "@/pages/settings-page";
 import CoursesPage from "@/pages/courses-page";
 import MyCoursesPage from "@/pages/my-courses-page";
 import CertificatesPage from "@/pages/certificates-page";
+import ProfilePage from "@/pages/profile-page";
+import AboutPage from "@/pages/about-page";
 
 function Router() {
   return (
@@ -23,6 +25,8 @@ function Router() {
       <ProtectedRoute path="/certificates" component={CertificatesPage} />
       <ProtectedRoute path="/course/:id" component={CourseDetailsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/profile" component={ProfilePage} />
+      <ProtectedRoute path="/about" component={AboutPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>

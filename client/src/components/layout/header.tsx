@@ -54,6 +54,11 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         </div>
         
         <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" onClick={() => navigate("/about")}>
+              About
+            </Button>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
