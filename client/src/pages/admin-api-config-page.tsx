@@ -24,7 +24,7 @@ const apiConfigSchema = z.object({
   provider: z.string(),
   model: z.string(),
   apiKey: z.string().min(1, { message: "API key is required." }),
-  endpoint: z.string().optional(),
+  endpoint: z.union([z.string(), z.null()]).optional().transform(e => e === "" ? null : e),
   temperature: z.number().min(0).max(2),
   maxTokens: z.number().min(1).max(8192),
   useTranscriptions: z.boolean(),
