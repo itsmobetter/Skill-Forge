@@ -750,39 +750,54 @@ export class DatabaseStorage implements IStorage {
 
   // API configuration
   async getUserApiConfig(userId: number): Promise<ApiConfig | undefined> {
-    const [config] = await db.select().from(apiConfigs).where(eq(apiConfigs.userId, userId));
-    return config;
+    return executeQuery(
+      async () => {
+        const [config] = await db.select().from(schema.apiConfigs).where(eq(schema.apiConfigs.userId, userId));
+        return config;
+      },
+      `Failed to get API config for user ${userId}`
+    );
   }
 
   async createApiConfig(config: InsertApiConfig): Promise<ApiConfig> {
-    // Ensure temperature is a number (float) type
-    const configWithCorrectTypes = {
-      ...config,
-      temperature: Number(config.temperature) // Explicitly convert to number
-    };
-    
-    const [apiConfig] = await db.insert(apiConfigs).values(configWithCorrectTypes).returning();
-    return apiConfig;
+    return executeQuery(
+      async () => {
+        // Ensure temperature is a number (float) type
+        const configWithCorrectTypes = {
+          ...config,
+          temperature: Number(config.temperature) // Explicitly convert to number
+        };
+        
+        const [apiConfig] = await db.insert(schema.apiConfigs).values(configWithCorrectTypes).returning();
+        return apiConfig;
+      },
+      "Failed to create API configuration"
+    );
   }
 
   async updateUserApiConfig(userId: number, configUpdate: Partial<ApiConfig>): Promise<ApiConfig> {
-    const [existingConfig] = await db.select().from(apiConfigs).where(eq(apiConfigs.userId, userId));
-    if (!existingConfig) {
-      throw new Error("API configuration not found");
-    }
+    return executeQuery(
+      async () => {
+        const [existingConfig] = await db.select().from(schema.apiConfigs).where(eq(schema.apiConfigs.userId, userId));
+        if (!existingConfig) {
+          throw new Error("API configuration not found");
+        }
 
-    // Ensure temperature is a number (float) if it exists in the update
-    const updatedConfig = { ...configUpdate };
-    if (updatedConfig.temperature !== undefined) {
-      updatedConfig.temperature = Number(updatedConfig.temperature);
-    }
+        // Ensure temperature is a number (float) if it exists in the update
+        const updatedConfig = { ...configUpdate };
+        if (updatedConfig.temperature !== undefined) {
+          updatedConfig.temperature = Number(updatedConfig.temperature);
+        }
 
-    const [result] = await db.update(apiConfigs)
-      .set(updatedConfig)
-      .where(eq(apiConfigs.userId, userId))
-      .returning();
-    
-    return result;
+        const [result] = await db.update(schema.apiConfigs)
+          .set(updatedConfig)
+          .where(eq(schema.apiConfigs.userId, userId))
+          .returning();
+        
+        return result;
+      },
+      `Failed to update API configuration for user ${userId}`
+    );
   }
 
   // Course management
@@ -815,9 +830,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCourse(course: InsertCourse): Promise<Course> {
-    const id = Math.random().toString(36).substring(2, 11);
-    const [newCourse] = await db.insert(courses).values({...course, id}).returning();
-    return newCourse;
+    return executeQuery(
+      async () => {
+        const id = Math.random().toString(36).substring(2, 11);
+        const [newCourse] = await db.insert(schema.courses).values({...course, id}).returning();
+        return newCourse;
+      },
+      "Failed to create course"
+    );
   }
 
   async updateCourse(id: string, courseUpdate: Partial<Course>): Promise<Course> {
@@ -954,16 +974,21 @@ export class DatabaseStorage implements IStorage {
 
   // User course progress
   async getUserCourses(userId: number): Promise<(Course & { progress: number; completed: boolean })[]> {
-    const userCourses = await db.select({
-      ...courses,
-      progress: userCourseProgress.progress,
-      completed: userCourseProgress.completed,
-    })
-    .from(userCourseProgress)
-    .innerJoin(courses, eq(userCourseProgress.courseId, courses.id))
-    .where(eq(userCourseProgress.userId, userId));
+    return executeQuery(
+      async () => {
+        const userCourses = await db.select({
+          ...schema.courses,
+          progress: schema.userCourseProgress.progress,
+          completed: schema.userCourseProgress.completed,
+        })
+        .from(schema.userCourseProgress)
+        .innerJoin(schema.courses, eq(schema.userCourseProgress.courseId, schema.courses.id))
+        .where(eq(schema.userCourseProgress.userId, userId));
 
-    return userCourses as (Course & { progress: number; completed: boolean })[];
+        return userCourses as (Course & { progress: number; completed: boolean })[];
+      },
+      `Failed to get courses for user ${userId}`
+    );
   }
 
   async getUserCourseProgress(userId: number, courseId: string): Promise<UserCourseProgress | undefined> {
