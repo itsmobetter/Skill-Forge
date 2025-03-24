@@ -542,6 +542,41 @@ export class MemStorage implements IStorage {
     this.chatInteractions.set(id, newInteraction);
     return newInteraction;
   }
+
+  // Certificate management
+  private certificates: Map<string, Certificate> = new Map();
+
+  async getUserCertificates(userId: number): Promise<Certificate[]> {
+    return Array.from(this.certificates.values())
+      .filter(certificate => certificate.userId === userId)
+      .sort((a, b) => new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime());
+  }
+
+  async getCertificatesByCourse(courseId: string): Promise<Certificate[]> {
+    return Array.from(this.certificates.values())
+      .filter(certificate => certificate.courseId === courseId);
+  }
+
+  async getCertificate(id: string): Promise<Certificate | undefined> {
+    return this.certificates.get(id);
+  }
+
+  async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
+    const id = Math.random().toString(36).substring(2, 11);
+    const newCertificate: Certificate = { ...certificate, id };
+    this.certificates.set(id, newCertificate);
+    return newCertificate;
+  }
+
+  async deleteCertificate(id: string): Promise<void> {
+    this.certificates.delete(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email?.toLowerCase() === email.toLowerCase(),
+    );
+  }
 }
 
 import connectPg from "connect-pg-simple";
@@ -560,7 +595,8 @@ import {
   quizQuestions,
   quizResults,
   moduleTranscriptions,
-  chatInteractions
+  chatInteractions,
+  certificates
 } from "@shared/schema";
 
 const PostgresSessionStore = connectPg(session);
@@ -988,6 +1024,45 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return newInteraction;
+  }
+
+  // Certificate management
+  async getUserCertificates(userId: number): Promise<Certificate[]> {
+    return await db.select().from(certificates)
+      .where(eq(certificates.userId, userId))
+      .orderBy(desc(certificates.issuedDate));
+  }
+
+  async getCertificatesByCourse(courseId: string): Promise<Certificate[]> {
+    return await db.select().from(certificates)
+      .where(eq(certificates.courseId, courseId));
+  }
+
+  async getCertificate(id: string): Promise<Certificate | undefined> {
+    const [certificate] = await db.select().from(certificates)
+      .where(eq(certificates.id, id));
+    
+    return certificate;
+  }
+
+  async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
+    const id = Math.random().toString(36).substring(2, 11);
+    const [newCertificate] = await db.insert(certificates)
+      .values({...certificate, id})
+      .returning();
+    
+    return newCertificate;
+  }
+
+  async deleteCertificate(id: string): Promise<void> {
+    await db.delete(certificates).where(eq(certificates.id, id));
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users)
+      .where(eq(users.email, email));
+    
+    return user;
   }
 }
 
