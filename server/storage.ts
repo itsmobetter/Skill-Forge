@@ -905,14 +905,24 @@ export class DatabaseStorage implements IStorage {
 
   // Module management
   async getCourseModules(courseId: string): Promise<Module[]> {
-    return await db.select().from(modules)
-      .where(eq(modules.courseId, courseId))
-      .orderBy(modules.order);
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.modules)
+          .where(eq(schema.modules.courseId, courseId))
+          .orderBy(schema.modules.order);
+      },
+      `Failed to fetch modules for course ${courseId}`
+    );
   }
 
   async getModule(id: string): Promise<Module | undefined> {
-    const [module] = await db.select().from(modules).where(eq(modules.id, id));
-    return module;
+    return executeQuery(
+      async () => {
+        const [module] = await db.select().from(schema.modules).where(eq(schema.modules.id, id));
+        return module;
+      },
+      `Failed to fetch module ${id}`
+    );
   }
 
   async createModule(module: InsertModule): Promise<Module> {
@@ -927,54 +937,90 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateModule(id: string, moduleUpdate: Partial<Module>): Promise<Module> {
-    const [existingModule] = await db.select().from(modules).where(eq(modules.id, id));
-    if (!existingModule) {
-      throw new Error("Module not found");
-    }
+    return executeQuery(
+      async () => {
+        const [existingModule] = await db.select().from(schema.modules).where(eq(schema.modules.id, id));
+        if (!existingModule) {
+          throw new Error("Module not found");
+        }
 
-    const [updatedModule] = await db.update(modules)
-      .set(moduleUpdate)
-      .where(eq(modules.id, id))
-      .returning();
-    
-    return updatedModule;
+        const [updatedModule] = await db.update(schema.modules)
+          .set(moduleUpdate)
+          .where(eq(schema.modules.id, id))
+          .returning();
+        
+        return updatedModule;
+      },
+      `Failed to update module ${id}`
+    );
   }
 
   async deleteModule(id: string): Promise<void> {
-    await db.delete(quizQuestions).where(eq(quizQuestions.moduleId, id));
-    await db.delete(moduleTranscriptions).where(eq(moduleTranscriptions.moduleId, id));
-    await db.delete(moduleCompletions).where(eq(moduleCompletions.moduleId, id));
-    await db.delete(quizResults).where(eq(quizResults.moduleId, id));
-    await db.delete(modules).where(eq(modules.id, id));
+    return executeQuery(
+      async () => {
+        // Delete related quiz questions
+        await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.moduleId, id));
+        // Delete related transcriptions
+        await db.delete(schema.moduleTranscriptions).where(eq(schema.moduleTranscriptions.moduleId, id));
+        // Delete related completions
+        await db.delete(schema.moduleCompletions).where(eq(schema.moduleCompletions.moduleId, id));
+        // Delete related quiz results
+        await db.delete(schema.quizResults).where(eq(schema.quizResults.moduleId, id));
+        // Delete the module itself
+        await db.delete(schema.modules).where(eq(schema.modules.id, id));
+      },
+      `Failed to delete module ${id}`
+    );
   }
 
   // Material management
   async getCourseMaterials(courseId: string): Promise<Material[]> {
-    return await db.select().from(materials).where(eq(materials.courseId, courseId));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.materials)
+          .where(eq(schema.materials.courseId, courseId));
+      },
+      `Failed to fetch materials for course ${courseId}`
+    );
   }
 
   async createMaterial(material: InsertMaterial): Promise<Material> {
-    const id = Math.random().toString(36).substring(2, 11);
-    const [newMaterial] = await db.insert(materials).values({...material, id}).returning();
-    return newMaterial;
+    return executeQuery(
+      async () => {
+        const id = Math.random().toString(36).substring(2, 11);
+        const [newMaterial] = await db.insert(schema.materials).values({...material, id}).returning();
+        return newMaterial;
+      },
+      "Failed to create material"
+    );
   }
 
   async updateMaterial(id: string, materialUpdate: Partial<Material>): Promise<Material> {
-    const [existingMaterial] = await db.select().from(materials).where(eq(materials.id, id));
-    if (!existingMaterial) {
-      throw new Error("Material not found");
-    }
+    return executeQuery(
+      async () => {
+        const [existingMaterial] = await db.select().from(schema.materials).where(eq(schema.materials.id, id));
+        if (!existingMaterial) {
+          throw new Error("Material not found");
+        }
 
-    const [updatedMaterial] = await db.update(materials)
-      .set(materialUpdate)
-      .where(eq(materials.id, id))
-      .returning();
-    
-    return updatedMaterial;
+        const [updatedMaterial] = await db.update(schema.materials)
+          .set(materialUpdate)
+          .where(eq(schema.materials.id, id))
+          .returning();
+        
+        return updatedMaterial;
+      },
+      `Failed to update material ${id}`
+    );
   }
 
   async deleteMaterial(id: string): Promise<void> {
-    await db.delete(materials).where(eq(materials.id, id));
+    return executeQuery(
+      async () => {
+        await db.delete(schema.materials).where(eq(schema.materials.id, id));
+      },
+      `Failed to delete material ${id}`
+    );
   }
 
   // User course progress
