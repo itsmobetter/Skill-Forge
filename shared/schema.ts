@@ -61,9 +61,14 @@ export const apiConfigs = pgTable("api_configs", {
   streaming: boolean("streaming").default(true).notNull(),
 });
 
-export const insertApiConfigSchema = createInsertSchema(apiConfigs).omit({
-  id: true,
-});
+export const insertApiConfigSchema = createInsertSchema(apiConfigs)
+  .omit({
+    id: true,
+  })
+  .transform((data) => ({
+    ...data,
+    temperature: Number(data.temperature), // Ensure temperature is a number
+  }));
 
 // Courses
 export const courses = pgTable("courses", {
