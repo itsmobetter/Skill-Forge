@@ -15,6 +15,8 @@ import CertificatesPage from "@/pages/certificates-page";
 import ProfilePage from "@/pages/profile-page";
 import AboutPage from "@/pages/about-page";
 import AdminCoursesPage from "@/pages/admin-courses-page";
+import AdminUsersPage from "@/pages/admin-users-page";
+import AdminApiConfigPage from "@/pages/admin-api-config-page";
 
 // Custom component to check if user is admin
 function AdminProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType, path: string }) {
@@ -51,6 +53,8 @@ function Router() {
       
       {/* Admin routes */}
       <AdminProtectedRoute path="/admin/courses" component={AdminCoursesPage} />
+      <AdminProtectedRoute path="/admin/users" component={AdminUsersPage} />
+      <AdminProtectedRoute path="/admin/api-config" component={AdminApiConfigPage} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

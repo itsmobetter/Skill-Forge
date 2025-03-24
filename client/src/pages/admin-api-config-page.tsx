@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -70,7 +70,7 @@ export default function AdminApiConfigPage() {
   });
 
   // Update form when data is loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (globalConfig) {
       apiConfigForm.reset({
         ...apiConfigForm.getValues(),
