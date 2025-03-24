@@ -194,6 +194,70 @@ export const getSPCModules = (courseId: string): Omit<InsertModule, 'id'>[] => [
   }
 ];
 
+// Modules for the Cp & Cpk course
+export const getCpCpkModules = (courseId: string): Omit<InsertModule, 'id'>[] => [
+  {
+    courseId,
+    title: 'Introduction to Process Capability',
+    description: 'Understanding what process capability is and why it matters in quality assurance.',
+    duration: '45 mins',
+    order: 1,
+    videoUrl: 'https://www.youtube.com/watch?v=sample-cpk-1',
+    completed: false,
+    hasQuiz: true,
+    tags: ['capability', 'introduction', 'quality assurance'],
+    objectives: ['Define process capability', 'Understand the business impact of capability', 'Identify when to use capability studies']
+  },
+  {
+    courseId,
+    title: 'Process Variation and Distribution',
+    description: 'Analyzing process variation and understanding normal distribution in capability studies.',
+    duration: '60 mins',
+    order: 2,
+    videoUrl: 'https://www.youtube.com/watch?v=sample-cpk-2',
+    completed: false,
+    hasQuiz: true,
+    tags: ['variation', 'distribution', 'statistics'],
+    objectives: ['Identify sources of variation', 'Apply normal distribution concepts', 'Calculate standard deviation']
+  },
+  {
+    courseId,
+    title: 'Cp & Cpk: Calculation and Interpretation',
+    description: 'Learning to calculate and interpret the Cp and Cpk indices.',
+    duration: '90 mins',
+    order: 3,
+    videoUrl: 'https://www.youtube.com/watch?v=sample-cpk-3',
+    completed: false,
+    hasQuiz: true,
+    tags: ['Cp', 'Cpk', 'indices', 'calculation'],
+    objectives: ['Calculate Cp and Cpk correctly', 'Interpret Cp and Cpk values', 'Understand the relationship between Cp and Cpk']
+  },
+  {
+    courseId,
+    title: 'Improving Process Capability',
+    description: 'Techniques for improving process capability in manufacturing settings.',
+    duration: '75 mins',
+    order: 4,
+    videoUrl: 'https://www.youtube.com/watch?v=sample-cpk-4',
+    completed: false,
+    hasQuiz: true,
+    tags: ['improvement', 'techniques', 'implementation'],
+    objectives: ['Diagnose capability issues', 'Apply targeted improvement strategies', 'Monitor capability improvements']
+  },
+  {
+    courseId,
+    title: 'Case Studies and Applications',
+    description: 'Real-world case studies showing successful application of capability concepts.',
+    duration: '60 mins',
+    order: 5,
+    videoUrl: 'https://www.youtube.com/watch?v=sample-cpk-5',
+    completed: false,
+    hasQuiz: true,
+    tags: ['case studies', 'applications', 'real-world'],
+    objectives: ['Apply capability principles to diverse situations', 'Learn from industry examples', 'Avoid common implementation pitfalls']
+  }
+];
+
 // Materials for the ISO 9001 course
 export const getISOMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] => [
   {
@@ -258,6 +322,42 @@ export const getSPCMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] 
   }
 ];
 
+// Materials for the Cp & Cpk course
+export const getCpCpkMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] => [
+  {
+    courseId,
+    type: 'pdf',
+    title: 'Process Capability Guidelines',
+    description: 'Comprehensive guide to understanding and calculating process capability indices.',
+    url: 'https://example.com/process-capability-guide.pdf',
+    fileSize: '3.6 MB'
+  },
+  {
+    courseId,
+    type: 'spreadsheet',
+    title: 'Cp/Cpk Calculator',
+    description: 'Excel-based calculator for computing process capability indices from sample data.',
+    url: 'https://example.com/cpk-calculator.xlsx',
+    fileSize: '750 KB'
+  },
+  {
+    courseId,
+    type: 'pdf',
+    title: 'Process Capability Case Studies',
+    description: 'Real-world examples of how process capability analysis improved manufacturing quality.',
+    url: 'https://example.com/cpk-cases.pdf',
+    fileSize: '2.8 MB'
+  },
+  {
+    courseId,
+    type: 'pdf',
+    title: 'Statistical Distributions Reference',
+    description: 'Reference guide for understanding statistical distributions in process capability analysis.',
+    url: 'https://example.com/statistical-distributions.pdf',
+    fileSize: '4.1 MB'
+  }
+];
+
 // Function to seed all the default courses, modules, and materials
 export async function seedDefaultCourses() {
   try {
@@ -276,7 +376,7 @@ export async function seedDefaultCourses() {
       const course = await storage.createCourse(courseData);
       
       // Create modules for ISO course
-      if (course.title.includes('ISO 9001')) {
+      if (course.title.toLowerCase().includes('iso 9001')) {
         const modules = getISOModules(course.id);
         for (const moduleData of modules) {
           console.log(`Creating module: ${moduleData.title}`);
@@ -292,7 +392,7 @@ export async function seedDefaultCourses() {
       }
       
       // Create modules for SPC course
-      if (course.title.includes('Statistical Process Control')) {
+      if (course.title.toLowerCase().includes('statistical process control') || course.title.toLowerCase().includes('spc')) {
         const modules = getSPCModules(course.id);
         for (const moduleData of modules) {
           console.log(`Creating module: ${moduleData.title}`);
