@@ -4,6 +4,12 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, CheckCircle, UserPlus, Loader2, Eye, EyeOff } from "lucide-react";
+import { User, UserProfile } from "@shared/schema";
+
+// Extended user type with profile information
+interface UserWithProfile extends User {
+  profile?: UserProfile;
+}
 
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -45,7 +51,7 @@ export default function AdminUsersPage() {
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
 
   // Fetch all users
-  const { data: users = [], isLoading: isLoadingUsers, refetch: refetchUsers } = useQuery({
+  const { data: users = [], isLoading: isLoadingUsers, refetch: refetchUsers } = useQuery<UserWithProfile[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/users");
@@ -173,7 +179,7 @@ export default function AdminUsersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
+                    {users.map((user: UserWithProfile) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
