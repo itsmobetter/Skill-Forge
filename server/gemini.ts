@@ -1,33 +1,167 @@
 import { ApiConfig } from "@shared/schema";
+import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
 interface GeminiService {
   generateText: (prompt: string) => Promise<string>;
+  generateChatResponse: (messages: { role: string; content: string }[], context?: string) => Promise<string>;
+  generateQuizQuestions: (content: string, numQuestions?: number) => Promise<any>;
+  summarizeText: (text: string) => Promise<string>;
 }
 
 export function createGeminiService(config: ApiConfig): GeminiService {
-  // This is a mock implementation
-  // In a real app, you would use the Google Generative AI SDK
+  // Initialize the Google Generative AI SDK
+  const apiKey = process.env.GEMINI_API_KEY || config.apiKey;
+  const modelName = config.model || "gemini-pro"; // Default to gemini-pro if not specified
+  
+  if (!apiKey) {
+    console.error("No API key provided for Gemini");
+    throw new Error("Gemini API key is required");
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  
+  // Configure the safety settings
+  const safetySettings = [
+    {
+      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+  ];
+
+  // Create a model instance with the configured parameters
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: {
+      temperature: config.temperature,
+      maxOutputTokens: config.maxTokens,
+    },
+    safetySettings,
+  });
+
   return {
-    generateText: async (prompt: string) => {
+    generateText: async (prompt: string): Promise<string> => {
       try {
-        // In a real implementation, we would use the actual API
-        console.log(`Using model: ${config.model} with temperature: ${config.temperature}`);
-
-        // Mock response for testing
-        const mockResponses = [
-          "Based on the information provided, I recommend implementing a quality management system that aligns with ISO 9001 standards.",
-          "The statistical process control chart indicates your process is in control but could benefit from reduced variation.",
-          "To improve your Cpk values, I suggest reviewing your manufacturing tolerances and implementing targeted process improvements."
-        ];
-
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        return mockResponses[Math.floor(Math.random() * mockResponses.length)];
+        console.log(`Using model: ${modelName} with temperature: ${config.temperature}`);
+        
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        return response.text();
       } catch (error) {
         console.error("Error generating text with Gemini:", error);
-        throw new Error("Failed to generate text with Gemini");
+        throw new Error(`Failed to generate text with Gemini: ${error.message}`);
       }
-    }
+    },
+
+    generateChatResponse: async (messages: { role: string; content: string }[], context?: string): Promise<string> => {
+      try {
+        const chat = model.startChat({
+          history: messages.map(msg => ({
+            role: msg.role === "user" ? "user" : "model",
+            parts: [{ text: msg.content }],
+          })),
+          generationConfig: {
+            temperature: config.temperature,
+            maxOutputTokens: config.maxTokens,
+          },
+        });
+
+        let prompt = "";
+        if (context) {
+          prompt = `Consider the following context information when answering: ${context}\n\n`;
+        }
+        
+        // Get the last user message
+        const lastUserMessage = messages[messages.length - 1];
+        prompt += lastUserMessage.content;
+
+        const result = await chat.sendMessage(prompt);
+        return result.response.text();
+      } catch (error) {
+        console.error("Error generating chat response with Gemini:", error);
+        throw new Error(`Failed to generate chat response: ${error.message}`);
+      }
+    },
+
+    generateQuizQuestions: async (content: string, numQuestions: number = 5): Promise<any> => {
+      try {
+        const prompt = `
+          Based on the following content, create ${numQuestions} multiple-choice quiz questions to test understanding of the key concepts.
+          
+          Content: "${content}"
+          
+          For each question:
+          1. Provide a clear, concise question
+          2. Provide exactly 4 answer options (labeled A, B, C, D)
+          3. Indicate which option is correct
+          
+          Format your response as a JSON array with this structure:
+          [
+            {
+              "question": "Question text here?",
+              "options": [
+                {"id": "A", "text": "First option"},
+                {"id": "B", "text": "Second option"},
+                {"id": "C", "text": "Third option"},
+                {"id": "D", "text": "Fourth option"}
+              ],
+              "correctOptionId": "B"
+            }
+          ]
+          
+          Ensure all questions are directly related to the content provided and have only one correct answer.
+        `;
+
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        });
+
+        const responseText = result.response.text();
+        
+        // Extract JSON from response (handle if there's any text before or after the JSON)
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+          throw new Error("Failed to parse quiz questions from response");
+        }
+        
+        return JSON.parse(jsonMatch[0]);
+      } catch (error) {
+        console.error("Error generating quiz questions with Gemini:", error);
+        throw new Error(`Failed to generate quiz questions: ${error.message}`);
+      }
+    },
+
+    summarizeText: async (text: string): Promise<string> => {
+      try {
+        const prompt = `
+          Please provide a concise summary of the following text, highlighting the key points and main ideas.
+          Keep the summary clear and focused on the most important information.
+          
+          Text to summarize:
+          "${text}"
+        `;
+
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+      } catch (error) {
+        console.error("Error summarizing text with Gemini:", error);
+        throw new Error(`Failed to summarize text: ${error.message}`);
+      }
+    },
   };
 }

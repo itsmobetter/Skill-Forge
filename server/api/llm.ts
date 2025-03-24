@@ -158,17 +158,23 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       // Create Gemini client
       const gemini = await getGeminiService(userId);
 
-      // Build system instruction
-      const systemInstruction = `You are an expert educational assistant for a learning management system. 
-      Your goal is to provide helpful, accurate, and concise answers to questions about the course content.
-      Use the context provided to inform your answers, but you can also draw on your general knowledge 
-      to provide comprehensive responses. Always be professional and supportive in your tone.
-
-      Context about the course:
-      ${context}`;
+      // Build messages for chat
+      const messages = [
+        {
+          role: "system",
+          content: `You are an expert educational assistant for a learning management system. 
+          Your goal is to provide helpful, accurate, and concise answers to questions about the course content.
+          Use the context provided to inform your answers, but you can also draw on your general knowledge 
+          to provide comprehensive responses. Always be professional and supportive in your tone.`
+        },
+        {
+          role: "user",
+          content: question
+        }
+      ];
 
       // Call Gemini LLM
-      const answer = await gemini.askQuestion(question, systemInstruction);
+      const answer = await gemini.generateChatResponse(messages, context);
 
       // Save the interaction in history
       await storage.createChatInteraction({
@@ -252,8 +258,8 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       ${transcription.text}`;
 
       try {
-        // Generate quiz questions using structured content
-        const generatedQuestions = await gemini.generateStructuredContent(prompt, systemInstruction);
+        // Generate quiz questions using our new generateQuizQuestions method
+        const generatedQuestions = await gemini.generateQuizQuestions(transcription.text, count);
 
         // Validate the structure of generated questions
         if (!Array.isArray(generatedQuestions)) {
@@ -329,7 +335,11 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       const gemini = await getGeminiService(userId);
 
       // Generate a simulated transcription based on video ID and topic inferring from quality/engineering
-      const transcription = await gemini.generateTranscription(`quality assurance, engineering education, ISO standards (YouTube video ID: ${videoId})`);
+      const prompt = `Generate a realistic and detailed transcript for an engineering educational video about quality assurance, engineering education, or ISO standards. 
+      The video has the ID ${videoId} on YouTube. Focus on creating content that would be useful for training engineers in quality management.
+      Include technical details, examples, and explanations as would be found in a professional training video.`;
+      
+      const transcription = await gemini.generateText(prompt);
 
       // If a module ID is provided, save the transcription
       if (moduleId && transcription) {
