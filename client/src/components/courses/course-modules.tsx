@@ -24,6 +24,8 @@ interface CourseModulesProps {
 }
 
 export default function CourseModules({ modules, currentModuleOrder, courseId }: CourseModulesProps) {
+  const [, navigate] = useLocation();
+  
   // Mutation to update current module
   const updateModuleMutation = useMutation({
     mutationFn: async ({ moduleId }: { moduleId: string }) => {
@@ -44,6 +46,11 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
         updateModuleMutation.mutate({ moduleId: module.id });
       }
     }
+  };
+  
+  const navigateToModuleDetails = (moduleId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    navigate(`/courses/${courseId}/modules/${moduleId}`);
   };
 
   return (
@@ -92,12 +99,26 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
                     {module.duration} {isCurrent && "• Current"}
                   </p>
                 </div>
-                {module.hasQuiz && (
-                  <FileText className={cn(
-                    "h-4 w-4 ml-2",
-                    isCurrent ? "text-primary-600" : "text-slate-400"
-                  )} />
-                )}
+                <div className="flex items-center ml-2">
+                  {module.hasQuiz && (
+                    <FileText className={cn(
+                      "h-4 w-4 mr-2",
+                      isCurrent ? "text-primary-600" : "text-slate-400"
+                    )} />
+                  )}
+                  
+                  {!isLocked && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6" 
+                      onClick={(e) => navigateToModuleDetails(module.id, e)}
+                      title="View module details"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}

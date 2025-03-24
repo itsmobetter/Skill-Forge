@@ -105,6 +105,16 @@ export default function CourseDetailsPage() {
                         {currentModule ? `Module ${currentModule.order}: ${currentModule.title}` : 'Course Introduction'}
                       </h2>
                       <div className="flex space-x-2">
+                        {currentModule && (
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/courses/${id}/modules/${currentModule.id}`)}
+                            className="text-xs"
+                          >
+                            View Module Details
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon">
                           <Share className="h-4 w-4" />
                         </Button>
