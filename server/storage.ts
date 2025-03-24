@@ -29,6 +29,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUserPassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean>;
+  updateUserAdminStatus(userId: number, isAdmin: boolean): Promise<boolean>;
 
   // User profile
   getUserProfile(userId: number): Promise<UserProfile | undefined>;

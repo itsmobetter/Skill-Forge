@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { nanoid } from "nanoid";
+import { eq } from "drizzle-orm";
 
 // Quality-related sample courses
 const sampleCourses = [
@@ -8,77 +9,77 @@ const sampleCourses = [
     title: "ISO 9001 Quality Management System",
     description: "Learn the fundamentals of ISO 9001 Quality Management System and how to implement it in your organization.",
     imageUrl: "https://img.freepik.com/free-vector/gradient-quality-control-illustration_23-2149844779.jpg",
-    category: "iso",
-    level: "beginner",
+    tag: "Beginner",
+    tagColor: "green",
+    rating: 4.8,
+    reviewCount: 125,
     duration: "4 weeks",
-    price: 0,
-    featured: true,
   },
   {
     id: nanoid(),
     title: "Statistical Process Control (SPC)",
     description: "Master the techniques of Statistical Process Control to monitor and control quality during manufacturing.",
     imageUrl: "https://img.freepik.com/free-vector/data-analytics-illustration_23-2150729478.jpg",
-    category: "spc",
-    level: "intermediate",
+    tag: "Intermediate",
+    tagColor: "primary",
+    rating: 4.7,
+    reviewCount: 112,
     duration: "6 weeks",
-    price: 0,
-    featured: true,
   },
   {
     id: nanoid(),
     title: "Capability Analysis (Cp/Cpk)",
     description: "Understand how to use process capability indices to evaluate if a process is capable of meeting specifications.",
     imageUrl: "https://img.freepik.com/free-vector/gradient-analytics-concept_23-2149341803.jpg",
-    category: "quality",
-    level: "intermediate",
+    tag: "Intermediate",
+    tagColor: "primary",
+    rating: 4.5,
+    reviewCount: 87,
     duration: "3 weeks",
-    price: 0,
-    featured: false,
   },
   {
     id: nanoid(),
     title: "Measurement System Analysis (MSA)",
     description: "Learn how to evaluate the quality of measurement systems and reduce measurement variation.",
     imageUrl: "https://img.freepik.com/free-vector/gradient-technology-background_23-2149731772.jpg",
-    category: "msa",
-    level: "advanced",
+    tag: "Advanced",
+    tagColor: "orange",
+    rating: 4.6,
+    reviewCount: 94,
     duration: "4 weeks",
-    price: 0,
-    featured: false,
   },
   {
     id: nanoid(),
     title: "Root Cause Analysis",
     description: "Discover effective methods for identifying the root causes of problems in quality management systems.",
     imageUrl: "https://img.freepik.com/free-vector/flat-design-problem-solution-infographic_23-2149232208.jpg",
-    category: "rca",
-    level: "intermediate",
+    tag: "Intermediate",
+    tagColor: "primary",
+    rating: 4.9,
+    reviewCount: 142,
     duration: "3 weeks",
-    price: 0,
-    featured: true,
   },
   {
     id: nanoid(),
     title: "Design of Experiments (DOE)",
     description: "Master the principles of experimental design to optimize processes and product quality.",
     imageUrl: "https://img.freepik.com/free-vector/isometric-science-education-background_23-2149145885.jpg",
-    category: "doe",
-    level: "advanced",
+    tag: "Advanced",
+    tagColor: "orange",
+    rating: 4.7,
+    reviewCount: 78,
     duration: "8 weeks",
-    price: 0,
-    featured: false,
   },
   {
     id: nanoid(),
     title: "Failure Mode and Effects Analysis (FMEA)",
     description: "Learn how to identify potential failures in a system and prioritize improvements to prevent them.",
     imageUrl: "https://img.freepik.com/free-vector/gradient-risk-management-concept_23-2149237515.jpg",
-    category: "fmea",
-    level: "intermediate",
+    tag: "Intermediate",
+    tagColor: "primary",
+    rating: 4.8,
+    reviewCount: 116,
     duration: "4 weeks",
-    price: 0,
-    featured: true,
   },
 ];
 
@@ -92,6 +93,8 @@ const sampleModules = [
     order: 1,
     duration: "30 minutes",
     videoUrl: "https://www.youtube.com/embed/9vT8oY4j9xU",
+    completed: false,
+    hasQuiz: true,
   },
   {
     id: nanoid(),
@@ -101,6 +104,8 @@ const sampleModules = [
     order: 2,
     duration: "45 minutes",
     videoUrl: "https://www.youtube.com/embed/Z9UJ_5dlLaA",
+    completed: false,
+    hasQuiz: true,
   },
   {
     id: nanoid(),
@@ -110,6 +115,8 @@ const sampleModules = [
     order: 3,
     duration: "40 minutes",
     videoUrl: "https://www.youtube.com/embed/XsaR4g9WFcI",
+    completed: false,
+    hasQuiz: false,
   },
   {
     id: nanoid(),
@@ -119,6 +126,8 @@ const sampleModules = [
     order: 4,
     duration: "50 minutes",
     videoUrl: "https://www.youtube.com/embed/YKoFBWiChHw",
+    completed: false,
+    hasQuiz: true,
   },
 ];
 
@@ -132,6 +141,8 @@ const spcModules = [
     order: 1,
     duration: "35 minutes",
     videoUrl: "https://www.youtube.com/embed/GtLwXbxjbvA",
+    completed: false,
+    hasQuiz: true,
   },
   {
     id: nanoid(),
@@ -141,6 +152,8 @@ const spcModules = [
     order: 2,
     duration: "45 minutes",
     videoUrl: "https://www.youtube.com/embed/oZlwqchbGzA",
+    completed: false,
+    hasQuiz: true,
   },
   {
     id: nanoid(),
@@ -150,6 +163,8 @@ const spcModules = [
     order: 3,
     duration: "40 minutes",
     videoUrl: "https://www.youtube.com/embed/AAlBLsLeSCw",
+    completed: false,
+    hasQuiz: false,
   },
 ];
 
@@ -172,6 +187,34 @@ const sampleMaterials = [
     fileSize: "1.8 MB",
   },
 ];
+
+// Function to promote Syafiqazrin to admin
+export async function promoteSyafiqazrinToAdmin() {
+  try {
+    console.log("Checking for Syafiqazrin user to promote to admin...");
+    
+    // Find Syafiqazrin user
+    const user = await storage.getUserByUsername("Syafiqazrin");
+    
+    if (user && !user.isAdmin) {
+      // Update user to be admin
+      console.log("Promoting Syafiqazrin to admin...");
+      
+      // Update directly in database for simplicity (would normally use a proper update function)
+      await storage.db.update(storage.users)
+        .set({ isAdmin: true })
+        .where(eq(storage.users.id, user.id));
+        
+      console.log("Syafiqazrin successfully promoted to admin status!");
+    } else if (user && user.isAdmin) {
+      console.log("Syafiqazrin is already an admin.");
+    } else {
+      console.log("Syafiqazrin user not found.");
+    }
+  } catch (error) {
+    console.error("Error promoting Syafiqazrin to admin:", error);
+  }
+}
 
 // Function to seed the database with sample data
 export async function seedDatabase() {
