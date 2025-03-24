@@ -461,13 +461,20 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       
       if (!apiConfig) {
         // Create a new API config if one doesn't exist
+        // Make sure temperature is a number
+        const temperature = typeof req.body.temperature === 'number' 
+          ? req.body.temperature 
+          : req.body.temperature 
+            ? Number(req.body.temperature) 
+            : 0.7;
+            
         apiConfig = await storage.createApiConfig({
           userId,
           provider: req.body.provider || "Google AI",
           model: req.body.model || "gemini-1.5-flash",
           apiKey: req.body.apiKey || "",
           endpoint: req.body.endpoint || null,
-          temperature: req.body.temperature || 0.7,
+          temperature, // Use the correctly typed temperature
           maxTokens: req.body.maxTokens || 1024,
           useTranscriptions: req.body.useTranscriptions !== undefined ? req.body.useTranscriptions : true,
           usePdf: req.body.usePdf !== undefined ? req.body.usePdf : true,
