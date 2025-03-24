@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 interface TranscriptViewerProps {
-  moduleId: string;
+  moduleId: string | undefined;
   videoUrl?: string | null;
 }
 

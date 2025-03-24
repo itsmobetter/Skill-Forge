@@ -2,7 +2,9 @@ import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CheckCircle, Lock, PlayCircle, FileText } from "lucide-react";
+import { CheckCircle, Lock, PlayCircle, FileText, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 interface Module {
   id: string;

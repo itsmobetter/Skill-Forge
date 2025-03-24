@@ -9,6 +9,7 @@ import { ThemeProvider } from "./providers/theme-provider";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
 import CourseDetailsPage from "@/pages/course-details-page";
+import ModuleDetailPage from "@/pages/module-detail-page";
 import SettingsPage from "@/pages/settings-page";
 import CoursesPage from "@/pages/courses-page";
 import MyCoursesPage from "@/pages/my-courses-page";
@@ -48,6 +49,7 @@ function Router() {
       <ProtectedRoute path="/my-courses" component={MyCoursesPage} />
       <ProtectedRoute path="/certificates" component={CertificatesPage} />
       <ProtectedRoute path="/course/:id" component={CourseDetailsPage} />
+      <ProtectedRoute path="/courses/:courseId/modules/:moduleId" component={ModuleDetailPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/about" component={AboutPage} />

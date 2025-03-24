@@ -96,7 +96,7 @@ export default function ModuleDetailPage() {
 
   // Filter materials for the current module
   const moduleMaterials = materials?.filter(
-    material => material.moduleId === moduleId
+    material => material.courseId === courseId
   ) || [];
 
   // Handle tab changes
@@ -215,7 +215,7 @@ export default function ModuleDetailPage() {
             </TabsContent>
             
             <TabsContent value="transcript" className="mt-4">
-              <TranscriptViewer moduleId={moduleId} videoUrl={module.videoUrl} />
+              <TranscriptViewer moduleId={moduleId || ''} videoUrl={module.videoUrl} />
             </TabsContent>
           </Tabs>
         </div>
