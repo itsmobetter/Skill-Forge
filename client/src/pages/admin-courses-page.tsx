@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, FileVideo, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, FileVideo, Upload, ImagePlus, Star } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 const courseSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  imageUrl: z.string().url("Please provide a valid URL for the course image"),
+  imageUrl: z.string().min(1, "Course image is required"),
   category: z.string().min(1, "Category is required"),
   level: z.string().min(1, "Level is required"),
   duration: z.string().min(1, "Duration is required"),
+  rating: z.number().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
+  reviewCount: z.number().min(0, "Review count cannot be negative"),
+  tag: z.string().optional(),
+  tagColor: z.string().optional(),
   price: z.number().optional(),
   featured: z.boolean().optional(),
 });
@@ -48,6 +52,8 @@ export default function AdminCoursesPage() {
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("courses");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch courses
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
@@ -149,6 +155,10 @@ export default function AdminCoursesPage() {
       category: "",
       level: "beginner",
       duration: "",
+      rating: 5,
+      reviewCount: 0,
+      tag: "",
+      tagColor: "",
       price: 0,
       featured: false,
     },
@@ -166,8 +176,52 @@ export default function AdminCoursesPage() {
     },
   });
 
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (!file) return;
+    
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Image too large",
+        description: "Image size should be less than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Create a preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setImagePreview(result);
+      courseForm.setValue("imageUrl", result);
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Trigger file input click
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const onAddCourseSubmit = (data: CourseFormValues) => {
     addCourseMutation.mutate(data);
+    setImagePreview(null);
   };
 
   const onAddModuleSubmit = (data: ModuleFormValues) => {
