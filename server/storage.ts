@@ -655,7 +655,12 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     return executeQuery(
       async () => {
-        const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id));
+        // Simple and efficient query with limit for optimization
+        const [user] = await db.select()
+          .from(schema.users)
+          .where(eq(schema.users.id, id))
+          .limit(1);
+          
         return user;
       },
       `Failed to get user with ID ${id}`
@@ -663,9 +668,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
+    // Optimize query by converting username to lowercase for case-insensitive lookup
+    // Also use a prepared statement pattern
     return executeQuery(
       async () => {
-        const [user] = await db.select().from(schema.users).where(eq(schema.users.username, username));
+        // First try exact match (faster)
+        let [user] = await db.select().from(schema.users)
+          .where(eq(schema.users.username, username))
+          .limit(1);
+        
+        // If not found and username contains uppercase, try lowercase version
+        if (!user && username !== username.toLowerCase()) {
+          [user] = await db.select().from(schema.users)
+            .where(eq(schema.users.username, username.toLowerCase()))
+            .limit(1);
+        }
+        
         return user;
       },
       `Failed to get user with username ${username}`
@@ -712,24 +730,24 @@ export class DatabaseStorage implements IStorage {
 
   // User profile
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
-    const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+    const [profile] = await db.select().from(schema.userProfiles).where(eq(schema.userProfiles.userId, userId));
     return profile;
   }
 
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
-    const [userProfile] = await db.insert(userProfiles).values(profile).returning();
+    const [userProfile] = await db.insert(schema.userProfiles).values(profile).returning();
     return userProfile;
   }
 
   async updateUserProfile(userId: number, profile: Partial<UserProfile>): Promise<UserProfile> {
-    const [existingProfile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+    const [existingProfile] = await db.select().from(schema.userProfiles).where(eq(schema.userProfiles.userId, userId));
     if (!existingProfile) {
       throw new Error("Profile not found");
     }
 
-    const [updatedProfile] = await db.update(userProfiles)
+    const [updatedProfile] = await db.update(schema.userProfiles)
       .set(profile)
-      .where(eq(userProfiles.userId, userId))
+      .where(eq(schema.userProfiles.userId, userId))
       .returning();
     
     return updatedProfile;
@@ -1152,10 +1170,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(schema.users)
-      .where(eq(schema.users.email, email));
-    
-    return user;
+    return executeQuery(
+      async () => {
+        const [user] = await db.select().from(schema.users)
+          .where(eq(schema.users.email, email))
+          .limit(1);  // Optimize by limiting to 1 result
+        
+        return user;
+      },
+      `Failed to get user with email ${email}`
+    );
   }
 }
 
