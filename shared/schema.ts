@@ -205,6 +205,22 @@ export const insertChatInteractionSchema = createInsertSchema(chatInteractions).
   id: true,
 });
 
+// User certificates
+export const certificates = pgTable("certificates", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  courseId: text("course_id").notNull().references(() => courses.id),
+  courseName: text("course_name").notNull(),
+  issuedDate: timestamp("issued_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  credentialId: text("credential_id").notNull().unique(),
+  thumbnailUrl: text("thumbnail_url").notNull(),
+});
+
+export const insertCertificateSchema = createInsertSchema(certificates).omit({
+  id: true,
+});
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -238,3 +254,6 @@ export type InsertModuleTranscription = z.infer<typeof insertModuleTranscription
 
 export type ChatInteraction = typeof chatInteractions.$inferSelect;
 export type InsertChatInteraction = z.infer<typeof insertChatInteractionSchema>;
+
+export type Certificate = typeof certificates.$inferSelect;
+export type InsertCertificate = z.infer<typeof insertCertificateSchema>;

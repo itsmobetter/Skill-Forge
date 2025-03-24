@@ -26,6 +26,7 @@ export interface IStorage {
   // User management
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUserPassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean>;
@@ -86,6 +87,13 @@ export interface IStorage {
   // Chat interactions
   getChatInteractions(userId: number, courseId: string): Promise<ChatInteraction[]>;
   createChatInteraction(interaction: InsertChatInteraction): Promise<ChatInteraction>;
+  
+  // Certificate management
+  getUserCertificates(userId: number): Promise<Certificate[]>;
+  getCertificatesByCourse(courseId: string): Promise<Certificate[]>;
+  getCertificate(id: string): Promise<Certificate | undefined>;
+  createCertificate(certificate: InsertCertificate): Promise<Certificate>;
+  deleteCertificate(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
