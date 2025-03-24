@@ -118,13 +118,37 @@ export function setupAdminRoutes(router: Router, requireAuth: any, requireAdmin:
   // Get global API settings (admin only)
   router.get("/admin/settings/api", requireAdmin, async (req: Request, res: Response) => {
     try {
-      // In a real application, we would fetch global settings from the database
-      // For now, we'll return a mock response
-      res.json({
+      const userId = req.user!.id;
+      const apiConfig = await storage.getUserApiConfig(userId);
+      
+      // Add global settings properties to the response
+      const globalSettings = {
         useAdminApiKeyForAll: true,
         allowUserApiConfig: false,
         enableAdvancedFeatures: true
-      });
+      };
+      
+      if (apiConfig) {
+        // Return actual API config with the global settings
+        res.json({
+          ...apiConfig,
+          ...globalSettings
+        });
+      } else {
+        // Return default values if no config exists yet
+        res.json({
+          provider: "Google AI",
+          model: "gemini-1.5-flash",
+          apiKey: "",
+          endpoint: null,
+          temperature: 0.7,
+          maxTokens: 1024,
+          useTranscriptions: true,
+          usePdf: true,
+          streaming: true,
+          ...globalSettings
+        });
+      }
     } catch (error) {
       console.error("Error fetching global API settings:", error);
       res.status(500).json({ message: "Failed to fetch global API settings" });
@@ -134,9 +158,37 @@ export function setupAdminRoutes(router: Router, requireAuth: any, requireAdmin:
   // Update global API settings (admin only)
   router.patch("/admin/settings/api", requireAdmin, async (req: Request, res: Response) => {
     try {
-      // In a real application, we would update global settings in the database
-      // For now, we'll just return the request body
-      res.json(req.body);
+      const userId = req.user!.id;
+      let apiConfig = await storage.getUserApiConfig(userId);
+      
+      // Create API config if doesn't exist
+      if (!apiConfig) {
+        apiConfig = await storage.createApiConfig({
+          userId,
+          provider: req.body.provider || "Google AI",
+          model: req.body.model || "gemini-1.5-flash",
+          apiKey: req.body.apiKey || "",
+          endpoint: req.body.endpoint || null,
+          temperature: req.body.temperature || 0.7,
+          maxTokens: req.body.maxTokens || 1024,
+          useTranscriptions: req.body.useTranscriptions !== undefined ? req.body.useTranscriptions : true,
+          usePdf: req.body.usePdf !== undefined ? req.body.usePdf : true,
+          streaming: req.body.streaming !== undefined ? req.body.streaming : true
+        });
+        console.log("Created new API config for admin user:", userId);
+      } else {
+        // Update existing config
+        apiConfig = await storage.updateUserApiConfig(userId, req.body);
+        console.log("Updated API config for admin user:", userId);
+      }
+      
+      // Return the full response that the frontend expects
+      res.json({
+        ...apiConfig,
+        useAdminApiKeyForAll: req.body.useAdminApiKeyForAll !== undefined ? req.body.useAdminApiKeyForAll : true,
+        allowUserApiConfig: req.body.allowUserApiConfig !== undefined ? req.body.allowUserApiConfig : false,
+        enableAdvancedFeatures: req.body.enableAdvancedFeatures !== undefined ? req.body.enableAdvancedFeatures : true
+      });
     } catch (error) {
       console.error("Error updating global API settings:", error);
       res.status(500).json({ message: "Failed to update global API settings" });
