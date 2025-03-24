@@ -193,8 +193,12 @@ export async function promoteSyafiqazrinToAdmin() {
   try {
     console.log("Checking for Syafiqazrin user to promote to admin...");
     
-    // Find Syafiqazrin user
-    const user = await storage.getUserByUsername("Syafiqazrin");
+    // Find Syafiqazrin user (try both uppercase and lowercase first letter)
+    let user = await storage.getUserByUsername("Syafiqazrin");
+    if (!user) {
+      user = await storage.getUserByUsername("syafiqazrin");
+      console.log("Checking lowercase version 'syafiqazrin'...");
+    }
     
     if (user && !user.isAdmin) {
       // Update user to be admin
