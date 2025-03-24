@@ -67,27 +67,54 @@ export function createGeminiService(config: ApiConfig): GeminiService {
 
     generateChatResponse: async (messages: { role: string; content: string }[], context?: string): Promise<string> => {
       try {
-        const chat = model.startChat({
-          history: messages.map(msg => ({
-            role: msg.role === "user" ? "user" : "model",
-            parts: [{ text: msg.content }],
+        // Gemini only accepts "user" and "model" roles
+        // If there's a system message, prepend it to the first user message
+        let processedMessages = [];
+        let systemMessage = messages.find(msg => msg.role === "system");
+        let userMessages = messages.filter(msg => msg.role === "user");
+        
+        // If we have no user messages, this is an error case
+        if (userMessages.length === 0) {
+          throw new Error("At least one user message is required");
+        }
+        
+        // If we have a system message, add it to the first user message
+        if (systemMessage) {
+          processedMessages.push({
+            role: "user",
+            content: systemMessage.content + "\n\n" + userMessages[0].content
+          });
+          
+          // Add remaining user messages if any
+          for (let i = 1; i < userMessages.length; i++) {
+            processedMessages.push(userMessages[i]);
+          }
+        } else {
+          // No system message, just use the user messages
+          processedMessages = userMessages;
+        }
+        
+        // Add context if available
+        if (context) {
+          const lastUserMsg = processedMessages[processedMessages.length - 1];
+          processedMessages[processedMessages.length - 1] = {
+            role: "user",
+            content: `Consider the following context information when answering: ${context}\n\n${lastUserMsg.content}`
+          };
+        }
+        
+        // Generate direct content instead of using chat history
+        const result = await model.generateContent({
+          contents: processedMessages.map(msg => ({
+            role: "user",
+            parts: [{ text: msg.content }]
           })),
           generationConfig: {
             temperature: config.temperature,
             maxOutputTokens: config.maxTokens,
-          },
+          }
         });
-
-        let prompt = "";
-        if (context) {
-          prompt = `Consider the following context information when answering: ${context}\n\n`;
-        }
         
-        // Get the last user message
-        const lastUserMessage = messages[messages.length - 1];
-        prompt += lastUserMessage.content;
-
-        const result = await chat.sendMessage(prompt);
         return result.response.text();
       } catch (error: any) {
         console.error("Error generating chat response with Gemini:", error);
