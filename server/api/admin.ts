@@ -96,10 +96,19 @@ export function setupAdminRoutes(router: Router, requireAuth: any, requireAdmin:
         return res.status(404).json({ message: "User not found" });
       }
       
-      // We don't have a toggleUserAdmin function in our storage interface yet,
-      // This would need to be implemented in the storage.ts file
-      // For now, we'll send a 501 Not Implemented
-      return res.status(501).json({ message: "Toggle admin status not implemented yet" });
+      // Toggle the user's admin status (flip current value)
+      const success = await storage.updateUserAdminStatus(userId, !user.isAdmin);
+      
+      if (success) {
+        // Get the updated user to return in response
+        const updatedUser = await storage.getUser(userId);
+        return res.json({
+          message: `User admin status updated to ${!user.isAdmin}`,
+          user: updatedUser
+        });
+      } else {
+        return res.status(500).json({ message: "Failed to update admin status" });
+      }
     } catch (error) {
       console.error("Error toggling admin status:", error);
       res.status(500).json({ message: "Failed to update user" });

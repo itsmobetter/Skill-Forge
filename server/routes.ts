@@ -6,7 +6,7 @@ import { setupQuizRoutes } from "./api/quiz";
 import { setupLLMRoutes } from "./api/llm";
 import { setupAdminRoutes } from "./api/admin";
 import { storage } from "./storage";
-import { seedDatabase } from "./seed";
+import { seedDatabase, promoteSyafiqazrinToAdmin } from "./seed";
 import express from "express";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -37,6 +37,9 @@ async function seedInitialData() {
   try {
     // Check if we already have users
     const users = await storage.getAllUsers();
+    
+    // Always run this to ensure Syafiqazrin has admin privileges
+    await promoteSyafiqazrinToAdmin();
     
     if (users.length === 0) {
       // Create admin user
