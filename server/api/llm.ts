@@ -21,7 +21,19 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       const apiConfig = await storage.getUserApiConfig(userId);
 
       if (!apiConfig) {
-        return res.status(404).json({ message: "API configuration not found" });
+        // Return default config if none exists
+        return res.json({
+          userId,
+          provider: "Google AI",
+          model: "gemini-1.5-flash",
+          apiKey: "",
+          endpoint: null,
+          temperature: 0.7,
+          maxTokens: 1024,
+          useTranscriptions: true,
+          usePdf: true,
+          streaming: true
+        });
       }
 
       res.json(apiConfig);
@@ -35,8 +47,30 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
   router.patch("/llm/config", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
-      const updatedConfig = await storage.updateUserApiConfig(userId, req.body);
-      res.json(updatedConfig);
+      let apiConfig = await storage.getUserApiConfig(userId);
+      
+      if (!apiConfig) {
+        // Create a new API config if one doesn't exist
+        apiConfig = await storage.createApiConfig({
+          userId,
+          provider: req.body.provider || "Google AI",
+          model: req.body.model || "gemini-1.5-flash",
+          apiKey: req.body.apiKey || "",
+          endpoint: req.body.endpoint || null,
+          temperature: req.body.temperature || 0.7,
+          maxTokens: req.body.maxTokens || 1024,
+          useTranscriptions: req.body.useTranscriptions !== undefined ? req.body.useTranscriptions : true,
+          usePdf: req.body.usePdf !== undefined ? req.body.usePdf : true,
+          streaming: req.body.streaming !== undefined ? req.body.streaming : true
+        });
+        console.log("Created new API config for user in LLM API:", userId);
+        res.json(apiConfig);
+      } else {
+        // Update existing config
+        const updatedConfig = await storage.updateUserApiConfig(userId, req.body);
+        console.log("Updated API config for user in LLM API:", userId);
+        res.json(updatedConfig);
+      }
     } catch (error) {
       console.error("Error updating API configuration:", error);
       res.status(500).json({ message: "Failed to update API configuration" });
