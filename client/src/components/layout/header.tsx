@@ -8,6 +8,19 @@ import { Settings, User, LogOut, Menu } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
+// Define profile type based on the expected shape
+interface Profile {
+  id?: number;
+  userId?: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  position?: string | null;
+  department?: string | null;
+  about?: string | null;
+  avatarUrl?: string | null;
+}
+
 interface HeaderProps {
   toggleSidebar: () => void;
 }
@@ -17,7 +30,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
   const [, navigate] = useLocation();
   
   // Fetch user profile for avatar
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<Profile>({
     queryKey: ["/api/user/profile"],
   });
 
@@ -65,7 +78,7 @@ export default function Header({ toggleSidebar }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={profile?.avatarUrl} alt={user?.username} />
+                  {profile?.avatarUrl && <AvatarImage src={profile.avatarUrl} alt={user?.username} />}
                   <AvatarFallback>{getInitials()}</AvatarFallback>
                 </Avatar>
               </Button>

@@ -217,10 +217,10 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           </ScrollArea>
           
           {user?.isAdmin && (
-            <div className="bg-slate-50 p-4 border-t border-slate-200">
+            <div className="bg-muted/50 p-4 border-t">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <span className="inline-flex items-center justify-center h-10 w-10 rounded-md bg-secondary-100 text-secondary-600">
+                  <span className="inline-flex items-center justify-center h-10 w-10 rounded-md bg-secondary/20 text-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                       <circle cx="9" cy="7" r="4" />
@@ -230,8 +230,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                   </span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-slate-700">Admin Mode</p>
-                  <p className="text-xs text-slate-500">Full access enabled</p>
+                  <p className="text-sm font-medium text-foreground">Admin Mode</p>
+                  <p className="text-xs text-muted-foreground">Full access enabled</p>
                 </div>
               </div>
             </div>
