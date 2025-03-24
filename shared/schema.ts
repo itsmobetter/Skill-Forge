@@ -38,12 +38,8 @@ export const userProfiles = pgTable("user_profiles", {
   email: text("email"),
   position: text("position"),
   department: text("department"),
-  organization: text("organization"),
-  jobTitle: text("job_title"),
-  bio: text("bio"),
   about: text("about"),
   avatarUrl: text("avatar_url"),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
