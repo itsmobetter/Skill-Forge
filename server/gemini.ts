@@ -59,7 +59,7 @@ export function createGeminiService(config: ApiConfig): GeminiService {
         const result = await model.generateContent(prompt);
         const response = result.response;
         return response.text();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error generating text with Gemini:", error);
         throw new Error(`Failed to generate text with Gemini: ${error.message}`);
       }
@@ -89,7 +89,7 @@ export function createGeminiService(config: ApiConfig): GeminiService {
 
         const result = await chat.sendMessage(prompt);
         return result.response.text();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error generating chat response with Gemini:", error);
         throw new Error(`Failed to generate chat response: ${error.message}`);
       }
@@ -141,7 +141,7 @@ export function createGeminiService(config: ApiConfig): GeminiService {
         }
         
         return JSON.parse(jsonMatch[0]);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error generating quiz questions with Gemini:", error);
         throw new Error(`Failed to generate quiz questions: ${error.message}`);
       }
@@ -159,7 +159,7 @@ export function createGeminiService(config: ApiConfig): GeminiService {
 
         const result = await model.generateContent(prompt);
         return result.response.text();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error summarizing text with Gemini:", error);
         throw new Error(`Failed to summarize text: ${error.message}`);
       }
@@ -199,11 +199,11 @@ export function createGeminiService(config: ApiConfig): GeminiService {
           // No JSON found at all
           console.warn("No structured content detected in response");
           return null;
-        } catch (parseError) {
+        } catch (parseError: any) {
           console.error("Error parsing structured content:", parseError);
           throw new Error(`Failed to parse structured content: ${parseError.message}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error generating structured content with Gemini:", error);
         throw new Error(`Failed to generate structured content: ${error.message}`);
       }
