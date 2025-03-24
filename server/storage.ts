@@ -48,10 +48,13 @@ export interface IStorage {
 
   // Course management
   getAllCourses(): Promise<Course[]>;
+  getDeletedCourses(): Promise<Course[]>;
   getCourse(id: string): Promise<Course | undefined>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: string, course: Partial<Course>): Promise<Course>;
   deleteCourse(id: string): Promise<void>;
+  hardDeleteCourse(id: string): Promise<void>;
+  recoverCourse(id: string): Promise<Course | undefined>;
 
   // Module management
   getCourseModules(courseId: string): Promise<Module[]>;
@@ -256,7 +259,13 @@ export class MemStorage implements IStorage {
 
   // Course management
   async getAllCourses(): Promise<Course[]> {
-    return Array.from(this.courses.values());
+    return Array.from(this.courses.values())
+      .filter(course => !course.deleted);
+  }
+
+  async getDeletedCourses(): Promise<Course[]> {
+    return Array.from(this.courses.values())
+      .filter(course => course.deleted);
   }
 
   async getCourse(id: string): Promise<Course | undefined> {
@@ -282,6 +291,16 @@ export class MemStorage implements IStorage {
   }
 
   async deleteCourse(id: string): Promise<void> {
+    const course = this.courses.get(id);
+    if (!course) return;
+    
+    // Soft delete the course
+    course.deleted = true;
+    course.deletedAt = new Date();
+    this.courses.set(id, course);
+  }
+  
+  async hardDeleteCourse(id: string): Promise<void> {
     this.courses.delete(id);
     
     // Cascade delete related entities
@@ -307,6 +326,20 @@ export class MemStorage implements IStorage {
     for (const progress of progressToDelete) {
       this.userCourseProgress.delete(progress.id);
     }
+  }
+  
+  async recoverCourse(id: string): Promise<Course | undefined> {
+    const course = this.courses.get(id);
+    if (!course || !course.deleted) {
+      return undefined;
+    }
+    
+    // Recover the course
+    course.deleted = false;
+    course.deletedAt = null;
+    this.courses.set(id, course);
+    
+    return course;
   }
 
   // Module management
@@ -734,7 +767,11 @@ export class DatabaseStorage implements IStorage {
 
   // Course management
   async getAllCourses(): Promise<Course[]> {
-    return await db.select().from(courses);
+    return await db.select().from(courses).where(eq(courses.deleted, false));
+  }
+
+  async getDeletedCourses(): Promise<Course[]> {
+    return await db.select().from(courses).where(eq(courses.deleted, true));
   }
 
   async getCourse(id: string): Promise<Course | undefined> {
@@ -763,7 +800,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCourse(id: string): Promise<void> {
-    // We should ideally perform this in a transaction and cascade delete related entities
+    // Soft delete - mark the course as deleted
+    await db.update(courses)
+      .set({ 
+        deleted: true,
+        deletedAt: new Date()
+      })
+      .where(eq(courses.id, id));
+  }
+  
+  async hardDeleteCourse(id: string): Promise<void> {
+    // Hard delete - permanently remove the course and all related data
+    // We should ideally perform this in a transaction
     await db.delete(userCourseProgress).where(eq(userCourseProgress.courseId, id));
     await db.delete(materials).where(eq(materials.courseId, id));
     
@@ -779,6 +827,25 @@ export class DatabaseStorage implements IStorage {
     
     await db.delete(modules).where(eq(modules.courseId, id));
     await db.delete(courses).where(eq(courses.id, id));
+  }
+  
+  async recoverCourse(id: string): Promise<Course | undefined> {
+    // Recover a soft-deleted course
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    
+    if (!course || !course.deleted) {
+      return undefined;
+    }
+    
+    const [recoveredCourse] = await db.update(courses)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(courses.id, id))
+      .returning();
+      
+    return recoveredCourse;
   }
 
   // Module management

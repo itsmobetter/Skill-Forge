@@ -62,7 +62,7 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
     }
   });
 
-  // Delete a course (admin only)
+  // Delete a course (soft delete) (admin only)
   router.delete("/courses/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const course = await storage.getCourse(req.params.id);
@@ -75,6 +75,47 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete course" });
+    }
+  });
+  
+  // Hard delete a course (admin only)
+  router.delete("/courses/:id/hard", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const course = await storage.getCourse(req.params.id);
+      
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      await storage.hardDeleteCourse(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to hard delete course" });
+    }
+  });
+  
+  // Recover a deleted course (admin only)
+  router.post("/courses/:id/recover", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const recoveredCourse = await storage.recoverCourse(req.params.id);
+      
+      if (!recoveredCourse) {
+        return res.status(404).json({ message: "Course not found or not deleted" });
+      }
+      
+      res.json(recoveredCourse);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to recover course" });
+    }
+  });
+  
+  // Get deleted courses (admin only)
+  router.get("/courses/deleted", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const deletedCourses = await storage.getDeletedCourses();
+      res.json(deletedCourses);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch deleted courses" });
     }
   });
 
