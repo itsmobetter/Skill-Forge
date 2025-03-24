@@ -654,7 +654,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createApiConfig(config: InsertApiConfig): Promise<ApiConfig> {
-    const [apiConfig] = await db.insert(apiConfigs).values(config).returning();
+    // Ensure temperature is a number (float) type
+    const configWithCorrectTypes = {
+      ...config,
+      temperature: Number(config.temperature) // Explicitly convert to number
+    };
+    
+    const [apiConfig] = await db.insert(apiConfigs).values(configWithCorrectTypes).returning();
     return apiConfig;
   }
 
@@ -664,12 +670,18 @@ export class DatabaseStorage implements IStorage {
       throw new Error("API configuration not found");
     }
 
-    const [updatedConfig] = await db.update(apiConfigs)
-      .set(configUpdate)
+    // Ensure temperature is a number (float) if it exists in the update
+    const updatedConfig = { ...configUpdate };
+    if (updatedConfig.temperature !== undefined) {
+      updatedConfig.temperature = Number(updatedConfig.temperature);
+    }
+
+    const [result] = await db.update(apiConfigs)
+      .set(updatedConfig)
       .where(eq(apiConfigs.userId, userId))
       .returning();
     
-    return updatedConfig;
+    return result;
   }
 
   // Course management

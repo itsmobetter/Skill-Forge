@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 
@@ -69,6 +71,32 @@ export default function CertificatesPage() {
     }).format(date);
   };
 
+  // Add state for the certificate viewer modal
+  const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  // Handle viewing a certificate
+  const handleViewCertificate = (certificate: Certificate) => {
+    setSelectedCertificate(certificate);
+    setIsViewModalOpen(true);
+    // In a full implementation, you might want to fetch the full certificate data here
+  };
+
+  // Handle downloading a certificate
+  const handleDownloadCertificate = (certificate: Certificate) => {
+    // In a real implementation, this would trigger the certificate PDF download
+    alert(`Downloading certificate for ${certificate.courseName}...`);
+    
+    // Simulate download by creating a link to the certificate image
+    // In production, this would be an actual PDF
+    const link = document.createElement('a');
+    link.href = certificate.thumbnailUrl;
+    link.download = `${certificate.courseName} Certificate.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const renderCertificateCard = (certificate: Certificate) => (
     <Card
       key={certificate.id}
@@ -106,14 +134,22 @@ export default function CertificatesPage() {
         </div>
         
         <div className="flex space-x-2">
-          <Button variant="outline" className="flex-1 text-sm">
+          <Button 
+            variant="outline" 
+            className="flex-1 text-sm"
+            onClick={() => handleViewCertificate(certificate)}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
             View
           </Button>
-          <Button variant="outline" className="flex-1 text-sm">
+          <Button 
+            variant="outline" 
+            className="flex-1 text-sm"
+            onClick={() => handleDownloadCertificate(certificate)}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
@@ -188,6 +224,105 @@ export default function CertificatesPage() {
             </p>
           </div>
         )}
+        
+        {/* Certificate Viewer Modal */}
+        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+          <DialogContent className="sm:max-w-3xl">
+            {selectedCertificate && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl">Certificate of Completion</DialogTitle>
+                  <DialogDescription>
+                    Awarded for successfully completing the course.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="mt-4">
+                  <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg bg-gradient-to-r from-cyan-700 to-blue-500">
+                    <img
+                      src={selectedCertificate.thumbnailUrl}
+                      alt={`${selectedCertificate.courseName} Certificate`}
+                      className="h-full w-full object-cover opacity-30"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-8">
+                      <div className="text-center">
+                        <h2 className="text-3xl font-bold mb-2">{selectedCertificate.courseName}</h2>
+                        <p className="text-lg mb-6">Certificate of Completion</p>
+                        
+                        <div className="w-32 h-1 bg-white/30 mx-auto mb-6"></div>
+                        
+                        <p className="text-base mb-1">This certifies that</p>
+                        <p className="text-lg font-semibold mb-4">John Smith</p>
+                        
+                        <p className="text-base mb-2">has successfully completed the course</p>
+                        
+                        <div className="w-24 h-0.5 bg-white/30 mx-auto my-6"></div>
+                        
+                        <div className="grid grid-cols-2 gap-12 mt-8">
+                          <div className="text-center">
+                            <p className="text-sm mb-1">Issue Date</p>
+                            <p className="text-base">{formatDate(selectedCertificate.issuedDate)}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm mb-1">Credential ID</p>
+                            <p className="text-base">{selectedCertificate.credentialId}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-500">Certificate Details</h3>
+                      <div className="mt-3 space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-slate-500">Course:</span>
+                          <span className="text-sm font-medium">{selectedCertificate.courseName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-slate-500">Issued On:</span>
+                          <span className="text-sm font-medium">{formatDate(selectedCertificate.issuedDate)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-slate-500">Valid Until:</span>
+                          <span className="text-sm font-medium">
+                            {selectedCertificate.expiryDate 
+                              ? formatDate(selectedCertificate.expiryDate)
+                              : "No Expiration"
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-slate-500">Credential ID:</span>
+                          <span className="text-sm font-medium">{selectedCertificate.credentialId}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-500">Verification</h3>
+                      <p className="mt-2 text-sm text-slate-500">
+                        This certificate can be verified online using the credential ID.
+                      </p>
+                      <div className="mt-4">
+                        <Button 
+                          onClick={() => handleDownloadCertificate(selectedCertificate)}
+                          className="w-full"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download Certificate
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

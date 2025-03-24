@@ -105,20 +105,27 @@ export function setupAuth(app: Express) {
       });
 
       // Create default API settings
+      // Make sure temperature is a number (float) not a string
       const defaultConfig = {
         userId: user.id,
         provider: "Google",
         model: "gemini-1.5-flash", // Use Gemini Flash 1.5 as default
         apiKey: process.env.GEMINI_API_KEY || "",
         endpoint: "",
-        temperature: 0.7,
+        temperature: 0.7, // This needs to be a float
         maxTokens: 1024,
         useTranscriptions: true,
         usePdf: true,
         streaming: true
       };
 
-      await storage.createApiConfig(defaultConfig);
+      try {
+        await storage.createApiConfig(defaultConfig);
+        console.log("API config created successfully for user:", user.id);
+      } catch (error) {
+        console.error("Error creating API config:", error);
+        // Don't let this error stop the user creation process
+      }
 
       req.login(user, (err) => {
         if (err) return next(err);
