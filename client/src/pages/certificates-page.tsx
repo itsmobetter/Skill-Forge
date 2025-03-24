@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,25 +9,77 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DashboardLayout from "@/components/layout/dashboard-layout";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // Interface for a certificate
 interface Certificate {
   id: string;
+  userId: number;
   courseId: string;
   courseName: string;
-  issuedDate: string;
-  expiryDate: string | null;
+  issuedDate: string | Date;
+  expiryDate: string | Date | null;
   credentialId: string;
   thumbnailUrl: string;
+}
+
+// Interface for certificate creation
+interface CreateCertificateData {
+  courseId: string;
+  courseName: string;
+  thumbnailUrl: string;
+  expiryDate?: string | Date | null;
 }
 
 export default function CertificatesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+
+  // Define the user profile interface to fix type issues
+  interface UserProfile {
+    id: number;
+    userId: number;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    position: string | null;
+    department: string | null;
+    about: string | null;
+    avatarUrl: string | null;
+  }
+
+  // Fetch user profile
+  const { data: userProfile } = useQuery<UserProfile>({
+    queryKey: ["/api/user/profile"],
+  });
 
   // Fetch certificates from the API
   const { data: certificates, isLoading } = useQuery<Certificate[]>({
     queryKey: ["/api/user/certificates"],
+  });
+  
+  // Create certificate mutation
+  const createCertificateMutation = useMutation({
+    mutationFn: async (data: CreateCertificateData) => {
+      const res = await apiRequest("POST", "/api/certificates", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/certificates"] });
+      toast({
+        title: "Certificate created",
+        description: "Your certificate has been successfully created.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create certificate",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Filter certificates based on search term
@@ -37,8 +89,8 @@ export default function CertificatesPage() {
   );
 
   // Format date to a more readable format
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+  const formatDate = (dateStr: string | Date) => {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'long',
@@ -227,7 +279,11 @@ export default function CertificatesPage() {
                         <div className="w-32 h-1 bg-white/30 mx-auto mb-6"></div>
                         
                         <p className="text-base mb-1">This certifies that</p>
-                        <p className="text-lg font-semibold mb-4">John Smith</p>
+                        <p className="text-lg font-semibold mb-4">
+                          {userProfile?.firstName && userProfile?.lastName 
+                            ? `${userProfile.firstName} ${userProfile.lastName}` 
+                            : "Certificate Recipient"}
+                        </p>
                         
                         <p className="text-base mb-2">has successfully completed the course</p>
                         
