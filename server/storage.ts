@@ -16,10 +16,10 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { db } from "./db";
+import { promisify } from "util";
+import { scrypt } from "crypto";
 
 const MemoryStore = createMemoryStore(session);
 const scryptAsync = promisify(scrypt);
@@ -617,23 +617,20 @@ export class MemStorage implements IStorage {
 }
 
 import connectPg from "connect-pg-simple";
-import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { db, executeQuery } from "./db";
+import { eq, and, desc, sql, count, isNull, not } from "drizzle-orm";
 import { Pool } from "@neondatabase/serverless";
+import session from "express-session";
+import * as schema from "@shared/schema";
 import {
-  users,
-  userProfiles,
-  apiConfigs,
-  courses,
-  modules,
-  materials,
-  userCourseProgress,
-  moduleCompletions,
-  quizQuestions,
-  quizResults,
-  moduleTranscriptions,
-  chatInteractions,
-  certificates
+  User, InsertUser, UserProfile, InsertUserProfile,
+  ApiConfig, InsertApiConfig, Course, InsertCourse,
+  Module, InsertModule, Material, InsertMaterial,
+  UserCourseProgress, InsertUserCourseProgress, ModuleCompletion,
+  QuizQuestion, InsertQuizQuestion, QuizResult, InsertQuizResult,
+  ModuleTranscription, InsertModuleTranscription,
+  ChatInteraction, InsertChatInteraction,
+  Certificate, InsertCertificate
 } from "@shared/schema";
 
 const PostgresSessionStore = connectPg(session);
@@ -656,22 +653,32 @@ export class DatabaseStorage implements IStorage {
 
   // User management
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return executeQuery(
+      async () => {
+        const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id));
+        return user;
+      },
+      `Failed to get user with ID ${id}`
+    );
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    return executeQuery(
+      async () => {
+        const [user] = await db.select().from(schema.users).where(eq(schema.users.username, username));
+        return user;
+      },
+      `Failed to get user with username ${username}`
+    );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await db.insert(schema.users).values(insertUser).returning();
     return user;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    return await db.select().from(schema.users);
   }
 
   async updateUserPassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean> {
@@ -683,9 +690,9 @@ export class DatabaseStorage implements IStorage {
     // Note: In a real app, password verification should be done here or in auth.ts
     // This is simplified for the demo
     
-    await db.update(users)
+    await db.update(schema.users)
       .set({ password: newPassword })
-      .where(eq(users.id, userId));
+      .where(eq(schema.users.id, userId));
     
     return true;
   }
@@ -696,9 +703,9 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
     
-    await db.update(users)
+    await db.update(schema.users)
       .set({ isAdmin: isAdmin })
-      .where(eq(users.id, userId));
+      .where(eq(schema.users.id, userId));
     
     return true;
   }
@@ -767,16 +774,31 @@ export class DatabaseStorage implements IStorage {
 
   // Course management
   async getAllCourses(): Promise<Course[]> {
-    return await db.select().from(courses).where(eq(courses.deleted, false));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.courses).where(eq(schema.courses.deleted, false));
+      },
+      "Failed to get all active courses"
+    );
   }
 
   async getDeletedCourses(): Promise<Course[]> {
-    return await db.select().from(courses).where(eq(courses.deleted, true));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.courses).where(eq(schema.courses.deleted, true));
+      },
+      "Failed to get deleted courses"
+    );
   }
 
   async getCourse(id: string): Promise<Course | undefined> {
-    const [course] = await db.select().from(courses).where(eq(courses.id, id));
-    return course;
+    return executeQuery(
+      async () => {
+        const [course] = await db.select().from(schema.courses).where(eq(schema.courses.id, id));
+        return course;
+      },
+      `Failed to get course with ID ${id}`
+    );
   }
 
   async createCourse(course: InsertCourse): Promise<Course> {

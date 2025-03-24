@@ -21,3 +21,30 @@ export const pool = new Pool({
 
 // Set up drizzle with schema
 export const db = drizzle(pool, { schema });
+
+// Helper function to execute optimized queries with error handling
+export async function executeQuery<T>(
+  queryFn: () => Promise<T>,
+  errorMessage: string = "Database query failed"
+): Promise<T> {
+  try {
+    // Start timer to measure query performance
+    const startTime = performance.now();
+    
+    // Execute the query
+    const result = await queryFn();
+    
+    // Calculate query execution time
+    const executionTime = performance.now() - startTime;
+    
+    // Log slow queries (taking more than 200ms) for performance monitoring
+    if (executionTime > 200) {
+      console.warn(`Slow query detected (${Math.round(executionTime)}ms): ${queryFn.toString().slice(0, 150)}...`);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error(`${errorMessage}:`, error);
+    throw new Error(errorMessage);
+  }
+}
