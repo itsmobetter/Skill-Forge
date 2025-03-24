@@ -10,7 +10,8 @@ import {
   QuizResult, InsertQuizResult,
   ModuleTranscription, InsertModuleTranscription,
   ChatInteraction, InsertChatInteraction,
-  ModuleCompletion
+  ModuleCompletion,
+  Certificate, InsertCertificate
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
