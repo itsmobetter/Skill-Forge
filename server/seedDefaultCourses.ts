@@ -365,8 +365,128 @@ export async function seedDefaultCourses() {
     
     // Check if courses already exist
     const existingCourses = await storage.getAllCourses();
+    
+    // We'll check which courses already exist and which ones we need to create
     if (existingCourses.length > 0) {
-      console.log('Courses already exist, skipping default course creation');
+      console.log('Some courses exist, adding modules to existing courses and creating missing ones');
+      
+      // First, add modules to existing courses if needed
+      for (const course of existingCourses) {
+        console.log(`Checking modules for course: ${course.title}`);
+        
+        // Check if this course already has modules
+        const existingModules = await storage.getCourseModules(course.id);
+        if (existingModules.length > 0) {
+          console.log(`Course ${course.title} already has ${existingModules.length} modules, skipping`);
+          continue;
+        }
+        
+        // Add modules based on course title
+        if (course.title.toLowerCase().includes('iso 9001')) {
+          console.log(`Adding modules to ISO course: ${course.title}`);
+          const modules = getISOModules(course.id);
+          for (const moduleData of modules) {
+            console.log(`Creating module: ${moduleData.title}`);
+            await storage.createModule(moduleData);
+          }
+          
+          // Create materials for ISO course
+          const materials = getISOMaterials(course.id);
+          for (const materialData of materials) {
+            console.log(`Creating material: ${materialData.title}`);
+            await storage.createMaterial(materialData);
+          }
+        }
+        
+        if (course.title.toLowerCase().includes('statistical process control') || course.title.toLowerCase().includes('spc')) {
+          console.log(`Adding modules to SPC course: ${course.title}`);
+          const modules = getSPCModules(course.id);
+          for (const moduleData of modules) {
+            console.log(`Creating module: ${moduleData.title}`);
+            await storage.createModule(moduleData);
+          }
+          
+          // Create materials for SPC course
+          const materials = getSPCMaterials(course.id);
+          for (const materialData of materials) {
+            console.log(`Creating material: ${materialData.title}`);
+            await storage.createMaterial(materialData);
+          }
+        }
+        
+        if (course.title.toLowerCase().includes('process capability') || course.title.toLowerCase().includes('cp & cpk')) {
+          console.log(`Adding modules to Cp & Cpk course: ${course.title}`);
+          const modules = getCpCpkModules(course.id);
+          for (const moduleData of modules) {
+            console.log(`Creating module: ${moduleData.title}`);
+            await storage.createModule(moduleData);
+          }
+          
+          // Create materials for Cp & Cpk course
+          const materials = getCpCpkMaterials(course.id);
+          for (const materialData of materials) {
+            console.log(`Creating material: ${materialData.title}`);
+            await storage.createMaterial(materialData);
+          }
+        }
+      }
+      
+      // Now check for missing courses and create them
+      const existingCourseTitles = existingCourses.map(course => course.title.toLowerCase());
+      
+      for (const courseData of defaultCourses) {
+        if (!existingCourseTitles.includes(courseData.title.toLowerCase())) {
+          console.log(`Creating missing course: ${courseData.title}`);
+          const course = await storage.createCourse(courseData);
+          
+          // Create modules for this course
+          if (course.title.toLowerCase().includes('iso 9001')) {
+            const modules = getISOModules(course.id);
+            for (const moduleData of modules) {
+              console.log(`Creating module: ${moduleData.title}`);
+              await storage.createModule(moduleData);
+            }
+            
+            // Create materials
+            const materials = getISOMaterials(course.id);
+            for (const materialData of materials) {
+              console.log(`Creating material: ${materialData.title}`);
+              await storage.createMaterial(materialData);
+            }
+          }
+          
+          if (course.title.toLowerCase().includes('statistical process control') || course.title.toLowerCase().includes('spc')) {
+            const modules = getSPCModules(course.id);
+            for (const moduleData of modules) {
+              console.log(`Creating module: ${moduleData.title}`);
+              await storage.createModule(moduleData);
+            }
+            
+            // Create materials
+            const materials = getSPCMaterials(course.id);
+            for (const materialData of materials) {
+              console.log(`Creating material: ${materialData.title}`);
+              await storage.createMaterial(materialData);
+            }
+          }
+          
+          if (course.title.toLowerCase().includes('process capability') || course.title.toLowerCase().includes('cp & cpk')) {
+            const modules = getCpCpkModules(course.id);
+            for (const moduleData of modules) {
+              console.log(`Creating module: ${moduleData.title}`);
+              await storage.createModule(moduleData);
+            }
+            
+            // Create materials
+            const materials = getCpCpkMaterials(course.id);
+            for (const materialData of materials) {
+              console.log(`Creating material: ${materialData.title}`);
+              await storage.createMaterial(materialData);
+            }
+          }
+        }
+      }
+      
       return;
     }
     
@@ -401,6 +521,22 @@ export async function seedDefaultCourses() {
         
         // Create materials for SPC course
         const materials = getSPCMaterials(course.id);
+        for (const materialData of materials) {
+          console.log(`Creating material: ${materialData.title}`);
+          await storage.createMaterial(materialData);
+        }
+      }
+      
+      // Create modules for Process Capability (Cp & Cpk) course
+      if (course.title.toLowerCase().includes('process capability') || course.title.toLowerCase().includes('cp & cpk')) {
+        const modules = getCpCpkModules(course.id);
+        for (const moduleData of modules) {
+          console.log(`Creating module: ${moduleData.title}`);
+          await storage.createModule(moduleData);
+        }
+        
+        // Create materials for Cp & Cpk course
+        const materials = getCpCpkMaterials(course.id);
         for (const materialData of materials) {
           console.log(`Creating material: ${materialData.title}`);
           await storage.createMaterial(materialData);
