@@ -207,6 +207,23 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       res.status(500).json({ message: "Failed to update module" });
     }
   });
+  
+  // Delete a module (admin only)
+  router.delete("/courses/:courseId/modules/:moduleId", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const module = await storage.getModule(req.params.moduleId);
+      
+      if (!module || module.courseId !== req.params.courseId) {
+        return res.status(404).json({ message: "Module not found" });
+      }
+      
+      await storage.deleteModule(req.params.moduleId);
+      res.json({ message: "Module deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting module:", error);
+      res.status(500).json({ message: "Failed to delete module" });
+    }
+  });
 
   // Set current module
   router.post("/courses/:courseId/modules/:moduleId/start", requireAuth, async (req: Request, res: Response) => {
