@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -290,18 +289,12 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-        
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
-              <p className="text-slate-500">Manage your account and application preferences</p>
-            </div>
+    <DashboardLayout>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
+          <p className="text-slate-500">Manage your account and application preferences</p>
+        </div>
             
             <Card className="overflow-hidden mb-6">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -1000,8 +993,6 @@ export default function SettingsPage() {
               </Tabs>
             </Card>
           </div>
-        </main>
-      </div>
       
       {/* Add User Modal */}
       <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
@@ -1189,6 +1180,6 @@ export default function SettingsPage() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardLayout>
   );
 }
