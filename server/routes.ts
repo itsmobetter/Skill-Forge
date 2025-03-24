@@ -8,6 +8,7 @@ import { setupAdminRoutes } from "./api/admin";
 import { setupCertificateRoutes } from "./api/certificates";
 import { storage } from "./storage";
 import { seedDatabase, promoteSyafiqazrinToAdmin } from "./seed";
+import { seedDefaultCourses } from "./seedDefaultCourses";
 import express from "express";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -47,6 +48,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Seed initial data if database is empty
   await seedInitialData();
+  
+  // Seed default courses if none exist
+  await seedDefaultCourses();
 
   const httpServer = createServer(app);
   return httpServer;
