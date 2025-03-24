@@ -899,9 +899,7 @@ export default function AdminCoursesPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => {
-                                      // Edit module functionality
-                                    }}
+                                    onClick={() => openEditModuleDialog(module)}
                                   >
                                     <Pencil className="h-4 w-4" />
                                     <span className="sr-only">Edit</span>
@@ -989,6 +987,128 @@ export default function AdminCoursesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Edit Module Dialog */}
+      <Dialog open={isEditModuleOpen} onOpenChange={setIsEditModuleOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Module</DialogTitle>
+            <DialogDescription>
+              Update the module information.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...moduleForm}>
+            <form onSubmit={moduleForm.handleSubmit(onEditModuleSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={moduleForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., Introduction to ISO 9001" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={moduleForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="Provide a detailed description of the module" 
+                          className="min-h-[100px]"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={moduleForm.control}
+                    name="order"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Order</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            min={1}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          The order in which this module appears in the course
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={moduleForm.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., 45 minutes" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={moduleForm.control}
+                  name="videoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Video URL</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="e.g., https://www.youtube.com/watch?v=abcdefg" 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter URL for video content (YouTube, Vimeo, etc.)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditModuleOpen(false);
+                    setSelectedModule(null);
+                    moduleForm.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={editModuleMutation.isPending}
+                >
+                  {editModuleMutation.isPending ? "Updating..." : "Update Module"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
