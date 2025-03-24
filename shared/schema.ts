@@ -37,6 +37,35 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
 export const apiConfigs = pgTable("api_configs", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
+  provider: text("provider").notNull(),
+  model: text("model").notNull(),
+  apiKey: text("api_key"),
+  endpoint: text("endpoint"),
+  temperature: real("temperature").default(0.7),
+  maxTokens: integer("max_tokens").default(1024),
+  useTranscriptions: boolean("use_transcriptions").default(true),
+  usePdf: boolean("use_pdf").default(true),
+  streaming: boolean("streaming").default(true),
+});
+
+export const insertApiConfigSchema = createInsertSchema(apiConfigs).omit({
+  id: true,
+});
+
+// Add types for our entities
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+
+export type ApiConfig = typeof apiConfigs.$inferSelect;
+export type InsertApiConfig = z.infer<typeof insertApiConfigSchema>;
+
+// API configurations
+export const apiConfigs = pgTable("api_configs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
   provider: text("provider").notNull(), // Now "Google" instead of "OpenAI"
   model: text("model").notNull(), // Now "gemini-1.5-flash" instead of "gpt-4o"
   apiKey: text("api_key").notNull(),

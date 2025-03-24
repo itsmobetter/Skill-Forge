@@ -41,7 +41,7 @@ async function seedInitialData() {
       // Create admin user
       const adminUser = await storage.createUser({
         username: "admin",
-        password: "admin123", // In a real app, this would be hashed
+        password: await hashPassword("admin123"),
         isAdmin: true
       });
 
@@ -209,7 +209,7 @@ async function seedInitialData() {
       // Create a regular user
       const regularUser = await storage.createUser({
         username: "user",
-        password: "user123", // In a real app, this would be hashed
+        password: await hashPassword("user123"),
         isAdmin: false
       });
 

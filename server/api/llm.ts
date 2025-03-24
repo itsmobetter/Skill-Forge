@@ -14,22 +14,69 @@ interface QuizQuestion {
 }
 
 export function setupLLMRoutes(router: Router, requireAuth: any) {
+  // Get user's API configuration
+  router.get("/llm/config", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const apiConfig = await storage.getUserApiConfig(userId);
+
+      if (!apiConfig) {
+        return res.status(404).json({ message: "API configuration not found" });
+      }
+
+      res.json(apiConfig);
+    } catch (error) {
+      console.error("Error fetching API configuration:", error);
+      res.status(500).json({ message: "Failed to fetch API configuration" });
+    }
+  });
+
+  // Update user's API configuration
+  router.patch("/llm/config", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const updatedConfig = await storage.updateUserApiConfig(userId, req.body);
+      res.json(updatedConfig);
+    } catch (error) {
+      console.error("Error updating API configuration:", error);
+      res.status(500).json({ message: "Failed to update API configuration" });
+    }
+  });
+
+  // Generate a response from the LLM
+  router.post("/llm/generate", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { prompt } = req.body;
+
+      if (!prompt) {
+        return res.status(400).json({ message: "Prompt is required" });
+      }
+
+      const apiConfig = await storage.getUserApiConfig(userId);
+      if (!apiConfig) {
+        return res.status(404).json({ message: "API configuration not found" });
+      }
+
+      const geminiService = createGeminiService(apiConfig);
+      const response = await geminiService.generateText(prompt);
+
+      res.json({ response });
+    } catch (error) {
+      console.error("Error generating LLM response:", error);
+      res.status(500).json({ message: "Failed to generate response" });
+    }
+  });
+
   // Helper to get Gemini client with user's API key
   const getGeminiService = async (userId: number) => {
     const apiConfig = await storage.getUserApiConfig(userId);
-    
+
     if (!apiConfig) {
       throw new Error("API configuration not found");
     }
-    
-    // Use the user's API key if available, otherwise use the default one
-    const apiKey = apiConfig.apiKey || process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error("No API key available");
-    }
-    
-    return createGeminiService(apiKey, apiConfig.model || "gemini-1.5-flash");
+
+    return createGeminiService(apiConfig);
   };
 
   // Ask a question
@@ -37,18 +84,18 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
     try {
       const userId = req.user!.id;
       const { courseId, question, moduleId } = req.body;
-      
+
       if (!courseId || !question) {
         return res.status(400).json({ message: "Course ID and question are required" });
       }
-      
+
       // Get the course info
       const course = await storage.getCourse(courseId);
-      
+
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-      
+
       // Get module info if provided
       let module;
       if (moduleId) {
@@ -57,17 +104,17 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           return res.status(404).json({ message: "Module not found" });
         }
       }
-      
+
       // Get course materials for context
       const materials = await storage.getCourseMaterials(courseId);
-      
+
       // Get API configuration
       const apiConfig = await storage.getUserApiConfig(userId);
-      
+
       if (!apiConfig) {
         return res.status(404).json({ message: "API configuration not found" });
       }
-      
+
       // Get course transcriptions if enabled in API config
       let transcriptions = [];
       if (apiConfig.useTranscriptions) {
@@ -88,7 +135,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           }
         }
       }
-      
+
       // Get content from PDFs if enabled
       let pdfContents: string[] = [];
       if (apiConfig.usePdf) {
@@ -97,7 +144,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         // For this demo, we'll use the material title and description
         pdfContents = pdfMaterials.map(m => `${m.title}: ${m.description || ''}`);
       }
-      
+
       // Compile context
       const context = [
         `Course: ${course.title}`,
@@ -107,22 +154,22 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         ...transcriptions,
         ...pdfContents
       ].filter(Boolean).join('\n\n');
-      
+
       // Create Gemini client
       const gemini = await getGeminiService(userId);
-      
+
       // Build system instruction
       const systemInstruction = `You are an expert educational assistant for a learning management system. 
       Your goal is to provide helpful, accurate, and concise answers to questions about the course content.
       Use the context provided to inform your answers, but you can also draw on your general knowledge 
       to provide comprehensive responses. Always be professional and supportive in your tone.
-      
+
       Context about the course:
       ${context}`;
-      
+
       // Call Gemini LLM
       const answer = await gemini.askQuestion(question, systemInstruction);
-      
+
       // Save the interaction in history
       await storage.createChatInteraction({
         userId,
@@ -132,7 +179,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         answer,
         timestamp: new Date()
       });
-      
+
       res.json({ answer });
     } catch (error) {
       console.error("LLM question error:", error);
@@ -145,38 +192,38 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
     try {
       const userId = req.user!.id;
       const { courseId, moduleId, count = 5 } = req.body;
-      
+
       if (!courseId || !moduleId) {
         return res.status(400).json({ message: "Course ID and module ID are required" });
       }
-      
+
       // Verify user has admin rights
       if (!req.user!.isAdmin) {
         return res.status(403).json({ message: "Admin privileges required" });
       }
-      
+
       // Get the course and module info
       const course = await storage.getCourse(courseId);
       const module = await storage.getModule(moduleId);
-      
+
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-      
+
       if (!module || module.courseId !== courseId) {
         return res.status(404).json({ message: "Module not found" });
       }
-      
+
       // Get module transcription
       const transcription = await storage.getModuleTranscription(moduleId);
-      
+
       if (!transcription) {
         return res.status(404).json({ message: "No transcription found for this module" });
       }
-      
+
       // Create Gemini client
       const gemini = await getGeminiService(userId);
-      
+
       // System instruction for quiz generation
       const systemInstruction = `You are an expert quiz generator for educational content. 
       Your task is to create multiple-choice quiz questions based on the provided course module content.
@@ -194,34 +241,34 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           "correctOptionId": "B" // The ID of the correct option
         }
       ]`;
-      
+
       // Prompt for quiz generation
       const prompt = `Generate ${count} multiple-choice quiz questions for the following module content:
-      
+
       Course: ${course.title}
       Module: ${module.title}
-      
+
       Content:
       ${transcription.text}`;
-      
+
       try {
         // Generate quiz questions using structured content
         const generatedQuestions = await gemini.generateStructuredContent(prompt, systemInstruction);
-        
+
         // Validate the structure of generated questions
         if (!Array.isArray(generatedQuestions)) {
           throw new Error("Generated content is not an array");
         }
-        
+
         // Save the generated questions
         const savedQuestions = [];
-        
+
         for (const question of generatedQuestions) {
           // Validate question format
           if (!question.text || !Array.isArray(question.options) || !question.correctOptionId) {
             continue;
           }
-          
+
           try {
             const validatedQuestion = insertQuizQuestionSchema.parse({
               moduleId,
@@ -229,7 +276,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
               options: question.options,
               correctOptionId: question.correctOptionId
             });
-            
+
             const savedQuestion = await storage.createQuizQuestion(validatedQuestion);
             savedQuestions.push(savedQuestion);
           } catch (validationError) {
@@ -237,10 +284,10 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             // Skip invalid questions
           }
         }
-        
+
         // Update module to indicate it has a quiz
         await storage.updateModule(moduleId, { hasQuiz: true });
-        
+
         res.json({ questions: savedQuestions, count: savedQuestions.length });
       } catch (parseError) {
         console.error("Quiz generation parse error:", parseError);
@@ -257,45 +304,45 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
     try {
       const userId = req.user!.id;
       const { videoUrl, moduleId } = req.body;
-      
+
       if (!videoUrl) {
         return res.status(400).json({ message: "Video URL is required" });
       }
-      
+
       // Verify user has admin rights if trying to save to a module
       if (moduleId && !req.user!.isAdmin) {
         return res.status(403).json({ message: "Admin privileges required to save transcriptions" });
       }
-      
+
       // Get video ID from YouTube URL
       const videoIdMatch = videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
       const videoId = videoIdMatch ? videoIdMatch[1] : null;
-      
+
       if (!videoId) {
         return res.status(400).json({ message: "Invalid YouTube URL" });
       }
-      
+
       // For a real implementation, we would use the YouTube API or a transcription service
       // Here we'll use Gemini to generate a simulated transcription
-      
+
       // Create Gemini client
       const gemini = await getGeminiService(userId);
-      
+
       // Generate a simulated transcription based on video ID and topic inferring from quality/engineering
       const transcription = await gemini.generateTranscription(`quality assurance, engineering education, ISO standards (YouTube video ID: ${videoId})`);
-      
+
       // If a module ID is provided, save the transcription
       if (moduleId && transcription) {
         // Check if module exists
         const module = await storage.getModule(moduleId);
-        
+
         if (!module) {
           return res.status(404).json({ message: "Module not found" });
         }
-        
+
         // Save or update the transcription
         const existingTranscription = await storage.getModuleTranscription(moduleId);
-        
+
         if (existingTranscription) {
           await storage.updateModuleTranscription(existingTranscription.id, { text: transcription });
         } else {
@@ -305,17 +352,17 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             text: transcription
           });
         }
-        
+
         // Update module with the video URL if it's not already set
         if (!module.videoUrl) {
           await storage.updateModule(moduleId, { videoUrl });
         }
       }
-      
-      res.json({ 
-        transcription, 
+
+      res.json({
+        transcription,
         videoId,
-        savedToModule: moduleId ? true : false 
+        savedToModule: moduleId ? true : false
       });
     } catch (error) {
       console.error("Transcription error:", error);
