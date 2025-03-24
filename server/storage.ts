@@ -1,3 +1,4 @@
+import * as schema from "@shared/schema";
 import { 
   User, InsertUser, 
   Course, InsertCourse, 
@@ -17,6 +18,8 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
+import { eq, desc } from "drizzle-orm";
+import { db } from "./db";
 
 const MemoryStore = createMemoryStore(session);
 const scryptAsync = promisify(scrypt);
@@ -1029,26 +1032,26 @@ export class DatabaseStorage implements IStorage {
 
   // Certificate management
   async getUserCertificates(userId: number): Promise<Certificate[]> {
-    return await db.select().from(certificates)
-      .where(eq(certificates.userId, userId))
-      .orderBy(desc(certificates.issuedDate));
+    return await db.select().from(schema.certificates)
+      .where(eq(schema.certificates.userId, userId))
+      .orderBy(desc(schema.certificates.issuedDate));
   }
 
   async getCertificatesByCourse(courseId: string): Promise<Certificate[]> {
-    return await db.select().from(certificates)
-      .where(eq(certificates.courseId, courseId));
+    return await db.select().from(schema.certificates)
+      .where(eq(schema.certificates.courseId, courseId));
   }
 
   async getCertificate(id: string): Promise<Certificate | undefined> {
-    const [certificate] = await db.select().from(certificates)
-      .where(eq(certificates.id, id));
+    const [certificate] = await db.select().from(schema.certificates)
+      .where(eq(schema.certificates.id, id));
     
     return certificate;
   }
 
   async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
     const id = Math.random().toString(36).substring(2, 11);
-    const [newCertificate] = await db.insert(certificates)
+    const [newCertificate] = await db.insert(schema.certificates)
       .values({...certificate, id})
       .returning();
     
@@ -1056,12 +1059,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCertificate(id: string): Promise<void> {
-    await db.delete(certificates).where(eq(certificates.id, id));
+    await db.delete(schema.certificates).where(eq(schema.certificates.id, id));
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users)
-      .where(eq(users.email, email));
+    const [user] = await db.select().from(schema.users)
+      .where(eq(schema.users.email, email));
     
     return user;
   }
