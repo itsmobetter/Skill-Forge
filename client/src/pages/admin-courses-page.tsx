@@ -1024,7 +1024,11 @@ export default function AdminCoursesPage() {
                                     disabled={isGeneratingQuiz}
                                     title="Generate quiz questions for this module"
                                   >
-                                    <BrainCircuit className="h-4 w-4" />
+                                    {isGeneratingQuiz ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <BrainCircuit className="h-4 w-4" />
+                                    )}
                                     <span className="sr-only">Generate Quiz</span>
                                   </Button>
                                   <Button
