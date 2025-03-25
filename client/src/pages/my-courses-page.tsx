@@ -21,6 +21,8 @@ interface CourseWithProgress {
   duration: string;
   currentModule: number;
   totalModules: number;
+  quizPassed?: boolean;
+  bestQuizScore?: number;
 }
 
 export default function MyCoursesPage() {
@@ -79,6 +81,26 @@ export default function MyCoursesPage() {
               : `Module ${course.currentModule} of ${course.totalModules}`}
           </p>
         </div>
+        
+        {/* Quiz Performance Indicator */}
+        {course.bestQuizScore !== undefined && (
+          <div className="mt-3 flex items-center">
+            <div className={`mr-2 h-3 w-3 rounded-full ${
+              course.quizPassed 
+                ? 'bg-green-500' 
+                : course.bestQuizScore > 0 
+                  ? 'bg-yellow-500' 
+                  : 'bg-gray-300'
+            }`} />
+            <span className="text-xs">
+              {course.quizPassed 
+                ? 'Quiz passed' 
+                : course.bestQuizScore > 0 
+                  ? `Best score: ${course.bestQuizScore}%` 
+                  : 'Quiz not attempted'}
+            </span>
+          </div>
+        )}
 
         <div className="mt-4">
           <Link href={`/course/${course.id}`}>
