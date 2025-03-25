@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import VideoPlayer from "@/components/courses/video-player";
@@ -9,14 +9,45 @@ import CourseModules from "@/components/courses/course-modules";
 import AiAssistant from "@/components/chat/ai-assistant";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Bookmark, Share, Download } from "lucide-react";
+import { Loader2, ArrowLeft, Bookmark, Share, Download, CheckCircle } from "lucide-react";
 import QuizModal from "@/components/quiz/quiz-modal";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function CourseDetailsPage() {
   const { id } = useParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  
+  // Course enrollment mutation
+  const enrollMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/courses/${id}/enroll`, {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Enrolled Successfully",
+        description: "You have successfully enrolled in this course.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${id}/progress`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/courses"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Enrollment Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle course enrollment
+  const handleEnrollCourse = () => {
+    enrollMutation.mutate();
+  };
 
   // Fetch course details
   const { data: course, isLoading } = useQuery({
@@ -80,11 +111,30 @@ export default function CourseDetailsPage() {
                 </Button>
                 <h1 className="text-2xl font-semibold text-slate-900">{course.title}</h1>
               </div>
-              <div>
-                <Button variant="outline" className="flex items-center gap-1">
-                  <Bookmark className="h-4 w-4" />
-                  <span className="hidden sm:inline">Save</span>
-                </Button>
+              <div className="flex space-x-2">
+                {!userProgress ? (
+                  <Button 
+                    onClick={handleEnrollCourse} 
+                    className="flex items-center gap-1"
+                    disabled={enrollMutation.isPending}
+                  >
+                    {enrollMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Bookmark className="h-4 w-4 mr-1" />
+                    )}
+                    Enroll Now
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-1"
+                    onClick={() => navigate(`/my-courses`)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">Enrolled</span>
+                  </Button>
+                )}
               </div>
             </div>
 
