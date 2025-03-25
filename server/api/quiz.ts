@@ -74,7 +74,7 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       
       const total = questions.length;
       const score = (correct / total) * 100;
-      const passed = score >= 70; // 70% passing threshold
+      const passed = score >= 80; // 80% passing threshold (requirement for employee competency assessment)
       
       // Save the quiz result
       const quizResult = await storage.createQuizResult({

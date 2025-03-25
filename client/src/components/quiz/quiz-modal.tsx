@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface QuizModalProps {
   isOpen: boolean;
@@ -253,7 +254,7 @@ export default function QuizModal({ isOpen, setIsOpen, courseId, moduleId }: Qui
 
             <div className="py-4">
               <div className="mb-6 text-center">
-                {results.correct / results.total >= 0.7 ? (
+                {results.correct / results.total >= 0.8 ? (
                   <div className="flex flex-col items-center">
                     <CheckCircle className="h-16 w-16 text-green-500 mb-2" />
                     <h3 className="text-xl font-semibold text-green-600">Passed!</h3>
@@ -266,7 +267,7 @@ export default function QuizModal({ isOpen, setIsOpen, courseId, moduleId }: Qui
                     <XCircle className="h-16 w-16 text-red-500 mb-2" />
                     <h3 className="text-xl font-semibold text-red-600">Try Again</h3>
                     <p className="text-slate-600 mt-1">
-                      You need to score at least 70% to pass. Review the material and try again.
+                      You need to score at least 80% to pass. Review the material and try again.
                     </p>
                   </div>
                 )}
