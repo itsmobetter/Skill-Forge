@@ -430,9 +430,9 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             endTime: segment.endTime
           }));
           
-          // Add to vector DB if OpenAI API key is available
+          // Add to vector DB if Gemini API key is available
           let vectorId = null;
-          if (process.env.OPENAI_API_KEY) {
+          if (process.env.GEMINI_API_KEY) {
             try {
               // Import vector DB and add segments
               const { vectorDB } = await import('../vector-db');
