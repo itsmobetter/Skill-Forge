@@ -868,9 +868,7 @@ export default function AdminCoursesPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                // Edit course functionality
-                              }}
+                              onClick={() => openEditCourseDialog(course)}
                             >
                               <Pencil className="h-4 w-4" />
                               <span className="sr-only">Edit</span>
@@ -1165,6 +1163,213 @@ export default function AdminCoursesPage() {
                   disabled={editModuleMutation.isPending}
                 >
                   {editModuleMutation.isPending ? "Updating..." : "Update Module"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Course Dialog */}
+      <Dialog open={isEditCourseOpen} onOpenChange={setIsEditCourseOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Course</DialogTitle>
+            <DialogDescription>
+              Update the course information.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...courseForm}>
+            <form onSubmit={courseForm.handleSubmit(onEditCourseSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={courseForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., ISO 9001 Quality Management" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={courseForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          placeholder="Provide a detailed description of the course" 
+                          className="min-h-[100px]"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 gap-4">
+                  <FormField
+                    control={courseForm.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Course Image</FormLabel>
+                        <div className="flex flex-col gap-4">
+                          {imagePreview ? (
+                            <div className="relative w-full max-w-[300px] h-auto aspect-video overflow-hidden rounded-md border">
+                              <img src={imagePreview} alt="Course preview" className="object-cover w-full h-full" />
+                            </div>
+                          ) : field.value ? (
+                            <div className="relative w-full max-w-[300px] h-auto aspect-video overflow-hidden rounded-md border">
+                              <img src={field.value} alt="Course preview" className="object-cover w-full h-full" />
+                            </div>
+                          ) : null}
+                          
+                          <div className="flex gap-2">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={triggerFileInput} 
+                              className="flex items-center gap-2"
+                            >
+                              <ImagePlus className="h-4 w-4" />
+                              {field.value ? "Change Image" : "Upload Image"}
+                            </Button>
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              onChange={handleImageUpload}
+                              accept="image/*"
+                              className="hidden"
+                            />
+                            
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="Or enter image URL: https://example.com/image.jpg" 
+                                className="flex-1"
+                              />
+                            </FormControl>
+                          </div>
+                        </div>
+                        <FormDescription>
+                          Upload an image (max 2MB) or provide a URL. Recommended size: 1280x720 pixels.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={courseForm.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="iso">ISO Standards</SelectItem>
+                            <SelectItem value="quality">Quality Control</SelectItem>
+                            <SelectItem value="spc">Statistical Process Control</SelectItem>
+                            <SelectItem value="msa">Measurement System Analysis</SelectItem>
+                            <SelectItem value="rca">Root Cause Analysis</SelectItem>
+                            <SelectItem value="doe">Design of Experiments</SelectItem>
+                            <SelectItem value="fmea">FMEA</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Level</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="beginner">Beginner</SelectItem>
+                            <SelectItem value="intermediate">Intermediate</SelectItem>
+                            <SelectItem value="advanced">Advanced</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={courseForm.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., 4 weeks" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={courseForm.control}
+                    name="tag"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tag (Optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., New, Featured" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditCourseOpen(false);
+                    setSelectedCourseForEdit(null);
+                    courseForm.reset();
+                    setImagePreview(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={editCourseMutation.isPending}
+                >
+                  {editCourseMutation.isPending ? "Updating..." : "Update Course"}
                 </Button>
               </DialogFooter>
             </form>
