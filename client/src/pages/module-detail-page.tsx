@@ -16,6 +16,7 @@ export default function ModuleDetailPage() {
   const [_, params] = useRoute('/courses/:courseId/modules/:moduleId');
   const { courseId, moduleId } = params || {};
   const [activeTab, setActiveTab] = useState('video');
+  const [quizOpen, setQuizOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch module details
@@ -145,7 +146,7 @@ export default function ModuleDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={`grid w-full ${module.hasQuiz ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <TabsTrigger value="video" className="flex items-center gap-2">
                 <Video className="h-4 w-4" />
                 Video
@@ -158,6 +159,12 @@ export default function ModuleDetailPage() {
                 <BookOpen className="h-4 w-4" />
                 Transcript
               </TabsTrigger>
+              {module.hasQuiz && (
+                <TabsTrigger value="quiz" className="flex items-center gap-2">
+                  <PencilRuler className="h-4 w-4" />
+                  Quiz
+                </TabsTrigger>
+              )}
             </TabsList>
             
             <TabsContent value="video" className="mt-4">
@@ -219,6 +226,51 @@ export default function ModuleDetailPage() {
             <TabsContent value="transcript" className="mt-4">
               <TranscriptViewer moduleId={moduleId || ''} videoUrl={module.videoUrl} />
             </TabsContent>
+            
+            {module.hasQuiz && (
+              <TabsContent value="quiz" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl">Module Quiz</CardTitle>
+                    <CardDescription>
+                      Test your knowledge of the concepts covered in this module
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p>
+                        This quiz will test your understanding of the key concepts covered in this module.
+                        You need to score at least 80% to pass.
+                      </p>
+                      
+                      {/* Quiz Results Component */}
+                      <QuizResults moduleId={moduleId || ''} moduleName={module.title} />
+                      
+                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-md">
+                        <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                          <PencilRuler className="h-4 w-4" />
+                          Quiz Instructions
+                        </h4>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                          <li>• The quiz consists of multiple-choice questions</li>
+                          <li>• You need to score at least 80% to pass</li>
+                          <li>• You can retake the quiz if you don't pass</li>
+                          <li>• Review the module content before taking the quiz</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      className="w-full"
+                      onClick={() => setQuizOpen(true)}
+                    >
+                      Start Quiz
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 
@@ -315,6 +367,22 @@ export default function ModuleDetailPage() {
           </Card>
         </div>
       </div>
+      
+      {/* Quiz Modal */}
+      {module.hasQuiz && (
+        <QuizModal
+          open={quizOpen}
+          onClose={() => setQuizOpen(false)}
+          moduleId={moduleId || ''}
+          courseId={courseId}
+          onQuizComplete={(passed) => {
+            setQuizOpen(false);
+            if (passed) {
+              updateProgress(100);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

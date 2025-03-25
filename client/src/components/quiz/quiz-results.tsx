@@ -217,7 +217,7 @@ export default function QuizResults({ courseId, moduleId, moduleName }: QuizResu
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-slate-500">• Status:</span>
-                    <Badge variant={selectedResult.passed ? "success" : "destructive"}>
+                    <Badge variant={selectedResult.passed ? "default" : "destructive"} className={selectedResult.passed ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}>
                       {selectedResult.passed ? "Passed" : "Failed"}
                     </Badge>
                   </li>
