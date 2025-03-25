@@ -1053,11 +1053,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserCourseProgress(progress: InsertUserCourseProgress): Promise<UserCourseProgress> {
-    const [newProgress] = await db.insert(userCourseProgress)
-      .values(progress)
-      .returning();
-    
-    return newProgress;
+    return executeQuery(
+      async () => {
+        const [newProgress] = await db.insert(schema.userCourseProgress)
+          .values(progress)
+          .returning();
+        
+        return newProgress;
+      },
+      `Failed to create user course progress for user ${progress.userId} and course ${progress.courseId}`
+    );
   }
 
   async updateUserCourseProgress(id: number, progressUpdate: Partial<UserCourseProgress>): Promise<UserCourseProgress> {
