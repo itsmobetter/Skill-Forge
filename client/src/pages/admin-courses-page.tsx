@@ -956,13 +956,14 @@ export default function AdminCoursesPage() {
                         <TableHead>Title</TableHead>
                         <TableHead>Duration</TableHead>
                         <TableHead>Video</TableHead>
+                        <TableHead>Quiz</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoadingModules ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
+                          <TableCell colSpan={6} className="text-center py-8">
                             <div className="flex justify-center">
                               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
                             </div>
@@ -971,7 +972,7 @@ export default function AdminCoursesPage() {
                         </TableRow>
                       ) : modules.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
+                          <TableCell colSpan={6} className="text-center py-8">
                             <p>No modules found</p>
                           </TableCell>
                         </TableRow>
@@ -990,6 +991,13 @@ export default function AdminCoursesPage() {
                                   <span className="text-amber-600 font-medium text-sm">Not set</span>
                                 )}
                               </TableCell>
+                              <TableCell>
+                                {module.hasQuiz ? (
+                                  <span className="text-green-600 font-medium text-sm">Available</span>
+                                ) : (
+                                  <span className="text-amber-600 font-medium text-sm">Not generated</span>
+                                )}
+                              </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
                                   <Button
@@ -999,6 +1007,16 @@ export default function AdminCoursesPage() {
                                   >
                                     <Pencil className="h-4 w-4" />
                                     <span className="sr-only">Edit</span>
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleGenerateQuiz(module.id)}
+                                    disabled={isGeneratingQuiz}
+                                    title="Generate quiz questions for this module"
+                                  >
+                                    <BrainCircuit className="h-4 w-4" />
+                                    <span className="sr-only">Generate Quiz</span>
                                   </Button>
                                   <Button
                                     variant="outline"
