@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertQuizQuestionSchema } from "@shared/schema";
 import { z } from "zod";
 import { createGeminiService } from "../gemini";
+import { nanoid } from "nanoid";
 
 interface QuizQuestion {
   text: string;
@@ -185,6 +186,33 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         // For this demo, we'll use the material title and description
         pdfContents = pdfMaterials.map(m => `${m.title}: ${m.description || ''}`);
       }
+      
+      // Try to get relevant transcript segments from vector DB if available
+      let relevantSegments: any[] = [];
+      if (process.env.OPENAI_API_KEY && apiConfig.useTranscriptions) {
+        try {
+          // Import vector DB and search for relevant segments
+          const { vectorDB } = await import('../vector-db');
+          if (vectorDB.isInitialized()) {
+            const segments = await vectorDB.searchTranscripts(
+              question,
+              moduleId,
+              courseId,
+              5 // Limit to 5 most relevant segments
+            );
+            
+            if (segments && segments.length > 0) {
+              relevantSegments = segments.map(segment => 
+                `[${Math.floor(segment.startTime / 60)}:${(segment.startTime % 60).toString().padStart(2, '0')} - ${Math.floor(segment.endTime / 60)}:${(segment.endTime % 60).toString().padStart(2, '0')}] ${segment.text}`
+              );
+              console.log(`Found ${relevantSegments.length} relevant transcript segments`);
+            }
+          }
+        } catch (vectorError) {
+          console.error("Vector DB search failed:", vectorError);
+          // Continue with regular transcriptions if vector search fails
+        }
+      }
 
       // Compile context
       const context = [
@@ -192,6 +220,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         course.description,
         module ? `Module: ${module.title}` : '',
         module?.description || '',
+        relevantSegments.length > 0 ? `Relevant Transcript Segments:\n${relevantSegments.join('\n')}` : '',
         ...transcriptions,
         ...pdfContents
       ].filter(Boolean).join('\n\n');
