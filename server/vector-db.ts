@@ -43,8 +43,8 @@ class VectorDB {
       if (process.env.OPENAI_API_KEY) {
         this.embedFunction = new OpenAIEmbeddingFunction({
           openai_api_key: process.env.OPENAI_API_KEY,
-          // Using ada model as it's cost-effective for embedding
-          model_name: "text-embedding-3-small"
+          // Using text-embedding-3-small model as it's cost-effective for embedding
+          openai_model: "text-embedding-3-small"
         });
       } else {
         console.warn("OPENAI_API_KEY not set, vector search will use basic matching");
@@ -52,15 +52,17 @@ class VectorDB {
 
       // Check if collection exists, create if not
       const collections = await this.client.listCollections();
-      if (!collections.find(col => col.name === "transcripts")) {
+      const collectionName = "transcripts";
+      
+      if (!collections.find(col => col.name === collectionName)) {
         this.transcriptsCollection = await this.client.createCollection({
-          name: "transcripts",
+          name: collectionName,
           embeddingFunction: this.embedFunction || undefined,
           metadata: { description: "Course module transcripts" }
         });
       } else {
         this.transcriptsCollection = await this.client.getCollection({
-          name: "transcripts",
+          name: collectionName,
           embeddingFunction: this.embedFunction || undefined,
         });
       }
@@ -142,14 +144,36 @@ class VectorDB {
       // Format results
       if (results.ids.length > 0 && results.ids[0].length > 0) {
         return results.ids[0].map((id, idx) => {
+          if (!results.metadatas || !results.metadatas[0] || !results.documents || !results.documents[0]) {
+            return {
+              id: id.toString(),
+              moduleId: "",
+              courseId: "",
+              text: "",
+              startTime: 0,
+              endTime: 0
+            };
+          }
+          
           const metadata = results.metadatas[0][idx];
+          if (!metadata) {
+            return {
+              id: id.toString(),
+              moduleId: "",
+              courseId: "",
+              text: results.documents[0][idx] || "",
+              startTime: 0,
+              endTime: 0
+            };
+          }
+          
           return {
-            id,
-            moduleId: metadata.moduleId,
-            courseId: metadata.courseId,
-            text: results.documents[0][idx],
-            startTime: parseFloat(metadata.startTime),
-            endTime: parseFloat(metadata.endTime)
+            id: id.toString(),
+            moduleId: String(metadata.moduleId || ""),
+            courseId: String(metadata.courseId || ""),
+            text: String(results.documents[0][idx] || ""),
+            startTime: typeof metadata.startTime === 'string' ? parseFloat(metadata.startTime) : 0,
+            endTime: typeof metadata.endTime === 'string' ? parseFloat(metadata.endTime) : 0
           };
         });
       }

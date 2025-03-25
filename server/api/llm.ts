@@ -375,43 +375,77 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       // Create Gemini client
       const gemini = await getGeminiService(userId);
 
-      // Generate a simulated transcription based on video ID and topic inferring from quality/engineering
-      const prompt = `Generate a realistic and detailed transcript for an engineering educational video about quality assurance, engineering education, or ISO standards. 
-      The video has the ID ${videoId} on YouTube. Focus on creating content that would be useful for training engineers in quality management.
-      Include technical details, examples, and explanations as would be found in a professional training video.`;
+      // Generate a timestamped transcription for better AI referencing
+      const { transcript, segments } = await gemini.generateTimestampedTranscript(videoId);
       
-      const transcription = await gemini.generateText(prompt);
-
-      // If a module ID is provided, save the transcription
-      if (moduleId && transcription) {
-        // Check if module exists
-        const module = await storage.getModule(moduleId);
-
-        if (!module) {
-          return res.status(404).json({ message: "Module not found" });
-        }
-
-        // Save or update the transcription
-        const existingTranscription = await storage.getModuleTranscription(moduleId);
-
-        if (existingTranscription) {
-          await storage.updateModuleTranscription(existingTranscription.id, { text: transcription });
-        } else {
-          await storage.createModuleTranscription({
+      // If a module ID is provided, save the transcription and process segments for vector DB
+      if (moduleId && transcript) {
+        try {
+          // Check if module exists
+          const module = await storage.getModule(moduleId);
+          if (!module) {
+            return res.status(404).json({ message: "Module not found" });
+          }
+          
+          // Get course ID for the module for context
+          const moduleWithCourse = await storage.getCourseModules(module.courseId);
+          const courseId = module.courseId;
+          
+          // Prepare segments for vector storage
+          const vectorSegments = segments.map((segment: any) => ({
+            id: nanoid(8),
             moduleId,
-            videoId,
-            text: transcription
-          });
-        }
+            courseId,
+            text: segment.text,
+            startTime: segment.startTime,
+            endTime: segment.endTime
+          }));
+          
+          // Add to vector DB if OpenAI API key is available
+          let vectorId = null;
+          if (process.env.OPENAI_API_KEY) {
+            try {
+              // Import vector DB and add segments
+              const { vectorDB } = await import('../vector-db');
+              vectorId = await vectorDB.addTranscriptSegments(vectorSegments, videoId);
+            } catch (vectorError) {
+              console.error("Vector DB storage failed:", vectorError);
+              // Continue even if vector storage fails
+            }
+          }
+          
+          // Save or update the transcription in the main database
+          const existingTranscription = await storage.getModuleTranscription(moduleId);
 
-        // Update module with the video URL if it's not already set
-        if (!module.videoUrl) {
-          await storage.updateModule(moduleId, { videoUrl });
+          if (existingTranscription) {
+            await storage.updateModuleTranscription(existingTranscription.id, { 
+              text: transcript,
+              timestampedText: segments,
+              vectorId: vectorId || existingTranscription.vectorId
+            });
+          } else {
+            await storage.createModuleTranscription({
+              moduleId,
+              videoId,
+              text: transcript,
+              timestampedText: segments,
+              vectorId
+            });
+          }
+
+          // Update module with the video URL if it's not already set
+          if (!module.videoUrl) {
+            await storage.updateModule(moduleId, { videoUrl });
+          }
+        } catch (error) {
+          console.error("Error processing transcription:", error);
+          // Continue to return the transcript even if storage fails
         }
       }
 
       res.json({
-        transcription,
+        transcription: transcript,
+        segments,
         videoId,
         savedToModule: moduleId ? true : false
       });

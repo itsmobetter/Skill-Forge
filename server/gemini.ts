@@ -7,6 +7,7 @@ interface GeminiService {
   generateQuizQuestions: (content: string, numQuestions?: number) => Promise<any>;
   summarizeText: (text: string) => Promise<string>;
   generateStructuredContent: (prompt: string, systemInstruction: string) => Promise<any>;
+  generateTimestampedTranscript: (videoId: string) => Promise<{ transcript: string, segments: any[] }>;
 }
 
 export function createGeminiService(config: ApiConfig): GeminiService {
@@ -62,6 +63,73 @@ export function createGeminiService(config: ApiConfig): GeminiService {
       } catch (error: any) {
         console.error("Error generating text with Gemini:", error);
         throw new Error(`Failed to generate text with Gemini: ${error.message}`);
+      }
+    },
+    
+    generateTimestampedTranscript: async (videoId: string): Promise<{ transcript: string, segments: any[] }> => {
+      try {
+        console.log(`Generating timestamped transcript for video: ${videoId}`);
+        
+        // In a real implementation, we would use a transcription service or YouTube API
+        // Here, we'll use Gemini to create a simulated transcript with timestamps
+        const prompt = `
+          Create a realistic educational transcript for a 10-minute video about quality management, ISO standards, or engineering education.
+          
+          The video's YouTube ID is ${videoId}.
+          
+          Format your response as a detailed transcript with 8-12 segments, each with:
+          1. A start time (in seconds, from 0 to 600)
+          2. An end time (in seconds, greater than start time)
+          3. The spoken text for that segment
+          
+          Return the transcript in JSON format as an array of segments like this:
+          [
+            {
+              "startTime": 0,
+              "endTime": 45,
+              "text": "Hello and welcome to this module on quality management systems..."
+            },
+            {
+              "startTime": 46,
+              "endTime": 92,
+              "text": "In this section, we'll explore the key requirements of ISO 9001:2015..."
+            }
+          ]
+          
+          Make sure the segments flow naturally and cover technical details about quality management.
+          Ensure the timestamps are in strictly ascending order with no gaps or overlaps.
+        `;
+        
+        // Use structured content generation for more reliable JSON output
+        const segments = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2, // Lower temperature for more structured output
+            maxOutputTokens: 1024,
+          },
+        });
+        
+        const responseText = segments.response.text();
+        
+        // Extract JSON from response
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+          throw new Error("Failed to parse transcript segments from response");
+        }
+        
+        // Parse the JSON array of segments
+        const parsedSegments = JSON.parse(jsonMatch[0]);
+        
+        // Create the full transcript by combining all segment texts
+        const fullTranscript = parsedSegments.map((segment: any) => segment.text).join(' ');
+        
+        return { 
+          transcript: fullTranscript,
+          segments: parsedSegments
+        };
+      } catch (error: any) {
+        console.error("Error generating timestamped transcript:", error);
+        throw new Error(`Failed to generate timestamped transcript: ${error.message}`);
       }
     },
 
