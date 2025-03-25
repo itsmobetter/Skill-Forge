@@ -59,10 +59,12 @@ type ModuleFormValues = z.infer<typeof moduleSchema>;
 export default function AdminCoursesPage() {
   const { toast } = useToast();
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
+  const [isEditCourseOpen, setIsEditCourseOpen] = useState(false);
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
   const [isEditModuleOpen, setIsEditModuleOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<any | null>(null);
+  const [selectedCourseForEdit, setSelectedCourseForEdit] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState("courses");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +105,32 @@ export default function AdminCoursesPage() {
       toast({
         title: "Course added",
         description: "The course has been created successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Edit course mutation
+  const editCourseMutation = useMutation({
+    mutationFn: async (data: CourseFormValues) => {
+      if (!selectedCourseForEdit) throw new Error("No course selected for editing");
+      const res = await apiRequest("PATCH", `/api/courses/${selectedCourseForEdit.id}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      setIsEditCourseOpen(false);
+      setSelectedCourseForEdit(null);
+      courseForm.reset();
+      toast({
+        title: "Course updated",
+        description: "The course has been updated successfully.",
       });
     },
     onError: (error: Error) => {
@@ -301,6 +329,40 @@ export default function AdminCoursesPage() {
       return;
     }
     addModuleMutation.mutate(data);
+  };
+  
+  // Handle edit course submit
+  const onEditCourseSubmit = (data: CourseFormValues) => {
+    if (!selectedCourseForEdit) {
+      toast({
+        title: "Error",
+        description: "No course selected for editing",
+        variant: "destructive",
+      });
+      return;
+    }
+    editCourseMutation.mutate(data);
+  };
+  
+  // Handle opening the edit course dialog
+  const openEditCourseDialog = (course: any) => {
+    setSelectedCourseForEdit(course);
+    // Set form values for the selected course
+    courseForm.reset({
+      title: course.title,
+      description: course.description,
+      imageUrl: course.imageUrl,
+      category: course.category || "",
+      level: course.level || "beginner",
+      duration: course.duration,
+      rating: course.rating || 5,
+      reviewCount: course.reviewCount || 0,
+      tag: course.tag || "",
+      tagColor: course.tagColor || "",
+      price: course.price || 0,
+      featured: course.featured || false,
+    });
+    setIsEditCourseOpen(true);
   };
 
   // Setup for delete course confirmation
