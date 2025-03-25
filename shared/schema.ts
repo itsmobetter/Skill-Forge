@@ -235,10 +235,15 @@ export const moduleTranscriptions = pgTable("module_transcriptions", {
   moduleId: text("module_id").notNull().references(() => modules.id).unique(),
   videoId: text("video_id").notNull(),
   text: text("text").notNull(),
+  // Add new fields for timestamped transcripts and vector storage
+  timestampedText: jsonb("timestamped_text"),
+  vectorId: text("vector_id"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
 export const insertModuleTranscriptionSchema = createInsertSchema(moduleTranscriptions).omit({
   id: true,
+  lastUpdated: true,
 });
 
 // Chat interactions
