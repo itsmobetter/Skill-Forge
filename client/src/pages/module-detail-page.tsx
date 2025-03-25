@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRoute } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, BookOpen, Video, File, CheckCircle, Circle } from 'lucide-react';
+import { Loader2, BookOpen, Video, File, CheckCircle, Circle, PencilRuler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TranscriptViewer } from '@/components/module/transcript-viewer';
+import QuizResults from '@/components/quiz/quiz-results';
+import QuizModal from '@/components/quiz/quiz-modal';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Module, Course, Material } from '@shared/schema';
