@@ -1024,19 +1024,57 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User course progress
-  async getUserCourses(userId: number): Promise<(Course & { progress: number; completed: boolean })[]> {
+  async getUserCourses(userId: number): Promise<(Course & { progress: number; completed: boolean; currentModule?: number; totalModules?: number })[]> {
     return executeQuery(
       async () => {
-        const userCourses = await db.select({
-          ...schema.courses,
-          progress: schema.userCourseProgress.progress,
-          completed: schema.userCourseProgress.completed,
-        })
-        .from(schema.userCourseProgress)
-        .innerJoin(schema.courses, eq(schema.userCourseProgress.courseId, schema.courses.id))
-        .where(eq(schema.userCourseProgress.userId, userId));
-
-        return userCourses as (Course & { progress: number; completed: boolean })[];
+        console.log(`[USER_COURSES] Fetching courses for user ID: ${userId}`);
+        
+        // First find all user course progress records
+        const userProgressRecords = await db.select()
+          .from(schema.userCourseProgress)
+          .where(eq(schema.userCourseProgress.userId, userId));
+        
+        console.log(`[USER_COURSES] Found ${userProgressRecords.length} course enrollments`);
+        
+        if (userProgressRecords.length === 0) {
+          return [];
+        }
+        
+        // Get course details for each enrolled course
+        const result = [];
+        
+        for (const progress of userProgressRecords) {
+          try {
+            // Get course details
+            const [course] = await db.select()
+              .from(schema.courses)
+              .where(eq(schema.courses.id, progress.courseId));
+              
+            if (!course) {
+              console.log(`[USER_COURSES] Course not found for progress record: ${progress.id}`);
+              continue;
+            }
+            
+            // Get module count
+            const modules = await db.select()
+              .from(schema.modules)
+              .where(eq(schema.modules.courseId, progress.courseId));
+              
+            // Add to result with additional fields
+            result.push({
+              ...course,
+              progress: progress.progress,
+              completed: progress.completed,
+              currentModule: progress.currentModuleOrder,
+              totalModules: modules.length
+            });
+          } catch (err) {
+            console.error(`[USER_COURSES] Error fetching details for course ${progress.courseId}:`, err);
+          }
+        }
+        
+        console.log(`[USER_COURSES] Returning ${result.length} courses`);
+        return result;
       },
       `Failed to get courses for user ${userId}`
     );

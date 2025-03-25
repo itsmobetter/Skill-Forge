@@ -13,6 +13,7 @@ import { Loader2, ArrowLeft, Bookmark, Share, Download, CheckCircle } from "luci
 import QuizModal from "@/components/quiz/quiz-modal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Course, Module, Material, UserCourseProgress } from "@shared/schema";
 
 export default function CourseDetailsPage() {
   const { id } = useParams();
@@ -87,27 +88,27 @@ export default function CourseDetailsPage() {
   };
 
   // Fetch course details
-  const { data: course, isLoading } = useQuery({
+  const { data: course, isLoading } = useQuery<Course>({
     queryKey: [`/api/courses/${id}`],
   });
 
   // Fetch current user progress
-  const { data: userProgress } = useQuery({
+  const { data: userProgress } = useQuery<UserCourseProgress>({
     queryKey: [`/api/user/courses/${id}/progress`],
   });
 
   // Fetch course modules
-  const { data: modules } = useQuery({
+  const { data: modules } = useQuery<Module[]>({
     queryKey: [`/api/courses/${id}/modules`],
   });
 
   // Fetch course materials
-  const { data: materials } = useQuery({
+  const { data: materials } = useQuery<Material[]>({
     queryKey: [`/api/courses/${id}/materials`],
   });
 
   // Get current module based on progress
-  const currentModule = modules?.find(module => 
+  const currentModule = modules?.find((module: Module) => 
     module.order === (userProgress?.currentModuleOrder || 1)
   );
 
@@ -219,7 +220,7 @@ export default function CourseDetailsPage() {
                       
                       {currentModule?.tags && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {currentModule.tags.map((tag, index) => (
+                          {(currentModule.tags as string[]).map((tag: string, index: number) => (
                             <Badge key={index} variant="secondary">{tag}</Badge>
                           ))}
                         </div>
@@ -229,7 +230,7 @@ export default function CourseDetailsPage() {
                         <div className="border-t border-slate-200 pt-4">
                           <h3 className="text-lg font-medium text-slate-900 mb-2">Learning Objectives</h3>
                           <ul className="list-disc pl-5 space-y-1 text-slate-700">
-                            {currentModule.objectives.map((objective, index) => (
+                            {(currentModule.objectives as string[]).map((objective: string, index: number) => (
                               <li key={index}>{objective}</li>
                             ))}
                           </ul>

@@ -411,41 +411,50 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       const userId = req.user!.id;
       const courseId = req.params.id;
       
-      console.log(`Enrollment attempt - User ID: ${userId}, Course ID: ${courseId}`);
+      console.log(`[ENROLLMENT] User ID: ${userId} attempting to enroll in Course ID: ${courseId}`);
       
       // Check if course exists
       const course = await storage.getCourse(courseId);
       if (!course) {
+        console.log(`[ENROLLMENT] Course ID ${courseId} not found`);
         return res.status(404).json({ message: "Course not found" });
       }
       
-      console.log(`Course found: ${course.title}`);
+      console.log(`[ENROLLMENT] Course found: ${course.title}`);
       
       // Check if already enrolled
       const existingProgress = await storage.getUserCourseProgress(userId, courseId);
       if (existingProgress) {
+        console.log(`[ENROLLMENT] User ${userId} is already enrolled in course ${courseId}`);
         return res.status(400).json({ message: "Already enrolled in this course" });
       }
       
-      console.log(`User not already enrolled, creating progress record`);
+      console.log(`[ENROLLMENT] Creating new enrollment for User ${userId} in Course ${courseId}`);
       
-      // Create new progress record with explicit schema validation
+      // Get first module ID for the course to set as current module
+      const modules = await storage.getCourseModules(courseId);
+      const firstModule = modules && modules.length > 0 ? modules[0] : null;
+      
+      // Create new progress record
       const progressData = {
         userId,
         courseId,
-        currentModuleId: null,
+        currentModuleId: firstModule ? firstModule.id : null,
         currentModuleOrder: 1,
         progress: 0,
         completed: false
       };
       
       const progress = await storage.createUserCourseProgress(progressData);
-      console.log(`Enrollment successful: ${JSON.stringify(progress)}`);
+      console.log(`[ENROLLMENT] Success: ${JSON.stringify(progress)}`);
       
       res.status(201).json(progress);
-    } catch (error) {
-      console.error("Error enrolling in course:", error);
-      res.status(500).json({ message: `Failed to enroll in course: ${error.message}` });
+    } catch (error: any) {
+      console.error(`[ENROLLMENT] Error:`, error);
+      res.status(500).json({ 
+        message: `Failed to enroll in course: ${error?.message || 'Unknown error'}`,
+        error: process.env.NODE_ENV === 'production' ? undefined : error 
+      });
     }
   });
 
