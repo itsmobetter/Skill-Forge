@@ -10,13 +10,6 @@ import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-interface QuizModalProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  courseId: string;
-  moduleId: string;
-}
-
 interface QuizQuestion {
   id: string;
   text: string;
@@ -69,21 +62,29 @@ export default function QuizModal({
       return await res.json();
     },
     onSuccess: (data) => {
+      const passed = data.correct / data.total >= 0.8;
       setResults({
         correct: data.correct,
         total: data.total,
-        feedback: data.feedback
+        feedback: data.feedback,
+        passed: passed
       });
       setShowResults(true);
 
       // If passed, invalidate the course progress
-      if (data.passed) {
+      if (passed) {
         queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${courseId}/progress`] });
         
         toast({
           title: "Quiz Completed!",
           description: "You've passed the quiz and can now proceed to the next module.",
         });
+        
+        if (onQuizComplete) {
+          onQuizComplete(true);
+        }
+      } else if (onQuizComplete) {
+        onQuizComplete(false);
       }
     },
     onError: (error: Error) => {
@@ -97,12 +98,12 @@ export default function QuizModal({
 
   // Reset state when dialog opens/closes
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       setCurrentQuestionIndex(0);
       setSelectedAnswers({});
       setShowResults(false);
     }
-  }, [isOpen]);
+  }, [open]);
 
   // Handle answer selection
   const handleAnswerSelect = (questionId: string, answerId: string) => {
@@ -151,7 +152,7 @@ export default function QuizModal({
 
   // Handle close and reset
   const handleClose = () => {
-    setIsOpen(false);
+    onClose();
   };
 
   // Calculate progress percentage
@@ -161,7 +162,7 @@ export default function QuizModal({
 
   if (isLoading) {
     return (
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[500px]">
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
@@ -173,7 +174,7 @@ export default function QuizModal({
 
   if (!questions || questions.length === 0) {
     return (
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Quiz Unavailable</DialogTitle>
@@ -192,7 +193,7 @@ export default function QuizModal({
   const currentQuestion = questions[currentQuestionIndex];
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
         {!showResults ? (
           <>
@@ -268,7 +269,7 @@ export default function QuizModal({
 
             <div className="py-4">
               <div className="mb-6 text-center">
-                {results.correct / results.total >= 0.8 ? (
+                {results.passed ? (
                   <div className="flex flex-col items-center">
                     <CheckCircle className="h-16 w-16 text-green-500 mb-2" />
                     <h3 className="text-xl font-semibold text-green-600">Passed!</h3>

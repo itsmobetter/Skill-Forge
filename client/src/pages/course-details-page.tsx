@@ -24,10 +24,13 @@ export default function CourseDetailsPage() {
   // Course enrollment mutation
   const enrollMutation = useMutation({
     mutationFn: async () => {
+      console.log(`Attempting to enroll in course with ID: ${id}`);
       try {
+        // Pass an empty object as the third parameter instead of undefined to ensure proper content-type headers
         const res = await apiRequest("POST", `/api/courses/${id}/enroll`, {});
         return await res.json();
       } catch (error) {
+        console.error("Enrollment error:", error);
         // Check if this is an authentication error
         if (error instanceof Error && error.message.includes("401")) {
           throw new Error("Please log in to enroll in this course");
@@ -35,15 +38,23 @@ export default function CourseDetailsPage() {
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Enrollment successful:", data);
       toast({
         title: "Enrolled Successfully",
         description: "You have successfully enrolled in this course.",
       });
+      // Force refetch both progress and user courses list
       queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${id}/progress`] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/courses"] });
+      
+      // Reload the current page to refresh the UI state
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     },
     onError: (error: Error) => {
+      console.error("Enrollment error response:", error);
       if (error.message.includes("log in")) {
         // Authentication error, redirect to login
         navigate("/auth");
@@ -64,6 +75,14 @@ export default function CourseDetailsPage() {
 
   // Handle course enrollment
   const handleEnrollCourse = () => {
+    if (!id) {
+      toast({
+        title: "Enrollment Failed",
+        description: "Course ID is missing",
+        variant: "destructive",
+      });
+      return;
+    }
     enrollMutation.mutate();
   };
 
@@ -252,10 +271,16 @@ export default function CourseDetailsPage() {
 
       {isQuizOpen && currentModule && (
         <QuizModal 
-          isOpen={isQuizOpen} 
-          setIsOpen={setIsQuizOpen} 
+          open={isQuizOpen}
+          onClose={() => setIsQuizOpen(false)}
           courseId={course.id}
           moduleId={currentModule.id}
+          onQuizComplete={(passed) => {
+            console.log("Quiz completed, passed:", passed);
+            if (passed) {
+              queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${id}/progress`] });
+            }
+          }}
         />
       )}
     </div>

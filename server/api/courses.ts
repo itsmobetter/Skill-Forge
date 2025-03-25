@@ -411,11 +411,15 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       const userId = req.user!.id;
       const courseId = req.params.id;
       
+      console.log(`Enrollment attempt - User ID: ${userId}, Course ID: ${courseId}`);
+      
       // Check if course exists
       const course = await storage.getCourse(courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
+      
+      console.log(`Course found: ${course.title}`);
       
       // Check if already enrolled
       const existingProgress = await storage.getUserCourseProgress(userId, courseId);
@@ -423,19 +427,25 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         return res.status(400).json({ message: "Already enrolled in this course" });
       }
       
-      // Create new progress record
-      const progress = await storage.createUserCourseProgress({
+      console.log(`User not already enrolled, creating progress record`);
+      
+      // Create new progress record with explicit schema validation
+      const progressData = {
         userId,
         courseId,
         currentModuleId: null,
         currentModuleOrder: 1,
         progress: 0,
         completed: false
-      });
+      };
+      
+      const progress = await storage.createUserCourseProgress(progressData);
+      console.log(`Enrollment successful: ${JSON.stringify(progress)}`);
       
       res.status(201).json(progress);
     } catch (error) {
-      res.status(500).json({ message: "Failed to enroll in course" });
+      console.error("Error enrolling in course:", error);
+      res.status(500).json({ message: `Failed to enroll in course: ${error.message}` });
     }
   });
 
