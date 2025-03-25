@@ -193,30 +193,42 @@ export function createGeminiService(config: ApiConfig): GeminiService {
     generateQuizQuestions: async (content: string, numQuestions: number = 5): Promise<any> => {
       try {
         const prompt = `
-          Based on the following content, create ${numQuestions} multiple-choice quiz questions to test understanding of the key concepts.
+          You are an expert quality management instructor creating an assessment for engineering professionals.
+          
+          Based on the following content, create ${numQuestions} challenging multiple-choice quiz questions to assess understanding of key quality management concepts. The quiz will be used for employee competency assessment with an 80% passing threshold.
           
           Content: "${content}"
           
+          Create questions that:
+          1. Test comprehension of technical concepts, not just memorization
+          2. Focus on practical application of quality management principles 
+          3. Require critical thinking about real-world engineering scenarios
+          4. Range in difficulty from basic understanding to advanced application
+          5. Assess ability to apply standards such as ISO 9001 in workplace contexts
+          6. Include questions about statistical quality control where applicable
+          
           For each question:
-          1. Provide a clear, concise question
-          2. Provide exactly 4 answer options (labeled A, B, C, D)
-          3. Indicate which option is correct
+          1. Write a clear, concise question stem focused on a single concept
+          2. Create exactly 4 answer options (labeled A, B, C, D)
+          3. Make all options plausible, but only one clearly correct
+          4. Avoid obvious incorrect options or trick questions
+          5. Ensure the correct option fully addresses the question
           
           Format your response as a JSON array with this structure:
           [
             {
-              "question": "Question text here?",
+              "text": "Detailed question text that tests application of concepts?",
               "options": [
-                {"id": "A", "text": "First option"},
-                {"id": "B", "text": "Second option"},
-                {"id": "C", "text": "Third option"},
-                {"id": "D", "text": "Fourth option"}
+                {"id": "A", "text": "First option with sufficient detail"},
+                {"id": "B", "text": "Second option with sufficient detail"},
+                {"id": "C", "text": "Third option with sufficient detail"},
+                {"id": "D", "text": "Fourth option with sufficient detail"}
               ],
               "correctOptionId": "B"
             }
           ]
           
-          Ensure all questions are directly related to the content provided and have only one correct answer.
+          Ensure questions are technically accurate and directly relevant to the content provided.
         `;
 
         const result = await model.generateContent({

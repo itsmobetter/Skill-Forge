@@ -3,12 +3,15 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, CheckCircle, MessageSquare, Highlighter } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLLM } from "@/hooks/use-llm";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 
 // Set the workerSrc for PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -29,8 +32,15 @@ export default function PDFViewer({ pdfUrl, title, courseId, moduleId }: PDFView
   const [viewTime, setViewTime] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [isActive, setIsActive] = useState<boolean>(false);
+  const [selectedText, setSelectedText] = useState<string>("");
+  const [question, setQuestion] = useState<string>("");
+  const [aiResponseLoading, setAiResponseLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [isAiPopoverOpen, setIsAiPopoverOpen] = useState(false);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const { askQuestion } = useLLM();
 
   // Required time in seconds to mark PDF as complete
   const requiredViewTimeInSeconds = 30;
@@ -145,16 +155,158 @@ export default function PDFViewer({ pdfUrl, title, courseId, moduleId }: PDFView
     window.open(pdfUrl, "_blank");
     setIsActive(true);
   };
+  
+  // Handle text selection in the PDF
+  useEffect(() => {
+    const handleTextSelection = () => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim() !== '') {
+        setSelectedText(selection.toString().trim());
+        // Show a visual indicator that text is selected
+        toast({
+          title: "Text Selected",
+          description: "You can now ask the AI assistant about this selection.",
+          duration: 3000,
+        });
+        // Automatically open the AI popover when text is selected
+        setIsAiPopoverOpen(true);
+      }
+    };
+    
+    // Only add the event listener to the PDF container
+    const container = pdfContainerRef.current;
+    if (container) {
+      container.addEventListener('mouseup', handleTextSelection);
+    }
+    
+    return () => {
+      if (container) {
+        container.removeEventListener('mouseup', handleTextSelection);
+      }
+    };
+  }, [toast]);
+  
+  // Add CSS to style the selected text
+  useEffect(() => {
+    // Add a custom CSS rule to highlight selected text within the PDF viewer
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .pdf-document ::selection {
+        background-color: rgba(59, 130, 246, 0.3);
+        color: inherit;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+  
+  // Handle asking a question about the selected text
+  const handleAskQuestion = async () => {
+    if (!question) {
+      toast({
+        title: "Missing question",
+        description: "Please enter your question about the selected text.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setAiResponseLoading(true);
+    
+    try {
+      const response = await askQuestion({
+        courseId,
+        moduleId,
+        question: `Based on this content: "${selectedText}"\n\nAnswer this question: ${question}`
+      });
+      
+      setAiResponse(response.answer);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      toast({
+        title: "Error",
+        description: "Failed to get AI response. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setAiResponseLoading(false);
+    }
+  };
 
   return (
     <Card className="overflow-hidden">
       <CardHeader className="px-4 py-3 border-b border-slate-200 flex flex-row justify-between items-center">
         <CardTitle className="text-lg font-medium">{title}</CardTitle>
-        <Button variant="ghost" size="icon" onClick={handleDownload}>
-          <Download className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center space-x-2">
+          {selectedText && (
+            <Popover open={isAiPopoverOpen} onOpenChange={setIsAiPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-1 text-sm"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Ask AI
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Selected Text:</h4>
+                    <div className="text-sm p-2 bg-slate-100 rounded-md max-h-24 overflow-y-auto">
+                      {selectedText || "No text selected"}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="question" className="block text-sm font-medium mb-1">
+                      Your Question:
+                    </label>
+                    <Textarea
+                      id="question"
+                      placeholder="Ask a question about this selection..."
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      className="w-full"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <Button 
+                    className="w-full" 
+                    onClick={handleAskQuestion} 
+                    disabled={aiResponseLoading || !question}
+                  >
+                    {aiResponseLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : "Ask Question"}
+                  </Button>
+                  
+                  {aiResponse && (
+                    <div>
+                      <h4 className="font-medium mb-2">AI Response:</h4>
+                      <div className="text-sm p-3 bg-slate-100 rounded-md max-h-40 overflow-y-auto">
+                        {aiResponse}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+          <Button variant="ghost" size="icon" onClick={handleDownload}>
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="p-4 flex justify-center bg-slate-100 min-h-[500px]">
+      <CardContent className="p-4 flex justify-center bg-slate-100 min-h-[500px]" ref={pdfContainerRef}>
         {isLoading && (
           <div className="flex items-center justify-center h-[500px] w-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
