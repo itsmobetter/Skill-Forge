@@ -457,6 +457,15 @@ export default function AdminCoursesPage() {
   
   // Handle generate quiz for a module
   const handleGenerateQuiz = (moduleId: string) => {
+    if (!selectedCourse) {
+      toast({
+        title: "Error",
+        description: "No course selected. Please select a course first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsGeneratingQuiz(true);
     generateQuizMutation.mutate(moduleId);
   };
