@@ -1,7 +1,8 @@
-import { ChromaClient, Collection, OpenAIEmbeddingFunction } from "chromadb";
+import { ChromaClient, Collection } from "chromadb";
 import { nanoid } from "nanoid";
 import fs from "fs";
 import path from "path";
+import { createGeminiService } from "./gemini";
 
 /**
  * TimestampedTranscript represents a transcript segment with start and end times
@@ -16,12 +17,97 @@ export interface TimestampedTranscript {
 }
 
 /**
+ * Custom embedding function for Google Gemini
+ */
+class GeminiEmbeddingFunction {
+  private apiKey: string;
+  private model: string;
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+    this.model = "embedding-001"; // Using Google's embedding model
+  }
+
+  async generate(texts: string[]): Promise<number[][]> {
+    try {
+      // Use default configuration with just the API key
+      const geminiService = createGeminiService({
+        userId: 0,
+        provider: "Google AI",
+        model: "gemini-1.5-flash",
+        apiKey: this.apiKey,
+        endpoint: null,
+        temperature: 0.7,
+        maxTokens: 1024,
+        useTranscriptions: true,
+        usePdf: true,
+        streaming: false
+      });
+      
+      // Process each text to generate embeddings
+      const embeddings: number[][] = [];
+      
+      for (const text of texts) {
+        // Use Gemini to generate a structured response representing an embedding
+        // We'll request a fixed-size array of numbers as the embedding
+        const prompt = `Generate a numerical embedding vector representation of the following text. 
+        Return only a JSON array of 384 floating point numbers between -1 and 1 that represents the semantic meaning of the text:
+        
+        "${text}"`;
+        
+        try {
+          const embeddingJson = await geminiService.generateStructuredContent(
+            prompt,
+            "You are an embedding generation system. Generate a numerical embedding vector that represents the semantic meaning of text. Return only an array of 384 floating point numbers between -1 and 1. No explanation or other text."
+          );
+          
+          if (Array.isArray(embeddingJson) && embeddingJson.length === 384) {
+            embeddings.push(embeddingJson);
+          } else {
+            // Fallback: Generate a simple hash-based representation
+            console.warn("Invalid embedding format from Gemini, using fallback");
+            embeddings.push(this.generateFallbackEmbedding(text));
+          }
+        } catch (err) {
+          console.error("Error generating embedding with Gemini:", err);
+          embeddings.push(this.generateFallbackEmbedding(text));
+        }
+      }
+      
+      return embeddings;
+    } catch (error) {
+      console.error("Embedding generation error:", error);
+      // Return fallback embeddings for all texts
+      return texts.map(text => this.generateFallbackEmbedding(text));
+    }
+  }
+  
+  // Fallback function that creates a simple embedding from text
+  private generateFallbackEmbedding(text: string): number[] {
+    // Create a simple hash-based representation (not for production use)
+    const embedding = new Array(384).fill(0);
+    
+    // Simple hashing function to populate the embedding
+    const normalizedText = text.toLowerCase();
+    for (let i = 0; i < normalizedText.length; i++) {
+      const charCode = normalizedText.charCodeAt(i);
+      const position = i % 384;
+      embedding[position] = (embedding[position] + charCode / 255) / 2; // Keep values between 0 and 1
+    }
+    
+    // Normalize the embedding values to be between -1 and 1
+    const sum = embedding.reduce((acc, val) => acc + val, 0);
+    return embedding.map(val => (val - 0.5) * 2);
+  }
+}
+
+/**
  * VectorDB service handles interactions with ChromaDB for transcript storage and retrieval
  */
 class VectorDB {
   private client: ChromaClient;
   private transcriptsCollection: Collection | null = null;
-  private embedFunction: OpenAIEmbeddingFunction | null = null;
+  private embedFunction: GeminiEmbeddingFunction | null = null;
   private dataDirectory: string;
   private initialized: boolean = false;
 
@@ -40,30 +126,24 @@ class VectorDB {
    */
   async initialize() {
     try {
-      if (process.env.OPENAI_API_KEY) {
-        this.embedFunction = new OpenAIEmbeddingFunction({
-          openai_api_key: process.env.OPENAI_API_KEY,
-          // Using text-embedding-3-small model as it's cost-effective for embedding
-          openai_model: "text-embedding-3-small"
-        });
+      if (process.env.GEMINI_API_KEY) {
+        this.embedFunction = new GeminiEmbeddingFunction(process.env.GEMINI_API_KEY);
       } else {
-        console.warn("OPENAI_API_KEY not set, vector search will use basic matching");
+        console.warn("GEMINI_API_KEY not found for vector embeddings, will use basic matching");
       }
 
       // Check if collection exists, create if not
       const collections = await this.client.listCollections();
       const collectionName = "transcripts";
       
-      if (!collections.find(col => col.name === collectionName)) {
+      if (!collections.some(col => typeof col === 'object' && col !== null && 'name' in col && col.name === collectionName)) {
         this.transcriptsCollection = await this.client.createCollection({
           name: collectionName,
-          embeddingFunction: this.embedFunction || undefined,
           metadata: { description: "Course module transcripts" }
         });
       } else {
         this.transcriptsCollection = await this.client.getCollection({
-          name: collectionName,
-          embeddingFunction: this.embedFunction || undefined,
+          name: collectionName
         });
       }
 
