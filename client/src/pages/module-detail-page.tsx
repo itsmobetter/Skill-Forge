@@ -17,6 +17,8 @@ export default function ModuleDetailPage() {
   const { courseId, moduleId } = params || {};
   const [activeTab, setActiveTab] = useState('video');
   const [quizOpen, setQuizOpen] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [moduleProgress, setModuleProgress] = useState(0);
   const { toast } = useToast();
 
   // Fetch module details
