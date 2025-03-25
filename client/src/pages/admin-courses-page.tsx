@@ -75,6 +75,8 @@ export default function AdminCoursesPage() {
   const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
   const [moduleToDelete, setModuleToDelete] = useState<string | null>(null);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [isGeneratingTranscription, setIsGeneratingTranscription] = useState(false);
+  const [transcribingModuleId, setTranscribingModuleId] = useState<string | null>(null);
 
   // Fetch courses
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
@@ -267,6 +269,36 @@ export default function AdminCoursesPage() {
         variant: "destructive",
       });
       setIsGeneratingQuiz(false);
+    },
+  });
+  
+  // Generate transcription for module mutation
+  const generateTranscriptionMutation = useMutation({
+    mutationFn: async ({ moduleId, videoUrl }: { moduleId: string; videoUrl: string }) => {
+      if (!videoUrl) throw new Error("No video URL provided");
+      const res = await apiRequest("POST", "/api/llm/transcribe", { 
+        moduleId,
+        videoUrl
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", selectedCourse, "modules"] });
+      toast({
+        title: "Transcription generated",
+        description: "Video transcription has been generated successfully.",
+      });
+      setIsGeneratingTranscription(false);
+      setTranscribingModuleId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to generate transcription: ${error.message}`,
+        variant: "destructive",
+      });
+      setIsGeneratingTranscription(false);
+      setTranscribingModuleId(null);
     },
   });
 
@@ -468,6 +500,22 @@ export default function AdminCoursesPage() {
     
     setIsGeneratingQuiz(true);
     generateQuizMutation.mutate(moduleId);
+  };
+  
+  // Handle generate transcription for a module
+  const handleGenerateTranscription = (moduleId: string, videoUrl: string) => {
+    if (!videoUrl) {
+      toast({
+        title: "Error",
+        description: "This module doesn't have a video URL. Please add a video URL first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsGeneratingTranscription(true);
+    setTranscribingModuleId(moduleId);
+    generateTranscriptionMutation.mutate({ moduleId, videoUrl });
   };
 
   return (
