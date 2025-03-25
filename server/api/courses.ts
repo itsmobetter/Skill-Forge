@@ -165,6 +165,55 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
     }
   });
 
+  // Utility function to automatically generate transcription for a module
+  async function generateTranscriptionForModule(moduleId: string, videoUrl: string | null): Promise<void> {
+    if (!videoUrl) {
+      console.log(`[AUTO_TRANSCRIBE] Module ${moduleId} has no video URL, skipping transcription`);
+      return;
+    }
+    
+    try {
+      console.log(`[AUTO_TRANSCRIBE] Starting automatic transcription for module ${moduleId}`);
+      
+      // Get video ID from YouTube URL
+      const videoIdMatch = videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+      
+      if (!videoId) {
+        console.log(`[AUTO_TRANSCRIBE] Invalid YouTube URL: ${videoUrl}`);
+        return;
+      }
+      
+      // Check if transcription already exists
+      const existingTranscription = await storage.getModuleTranscription(moduleId);
+      if (existingTranscription) {
+        console.log(`[AUTO_TRANSCRIBE] Transcription already exists for module ${moduleId}`);
+        return;
+      }
+      
+      console.log(`[AUTO_TRANSCRIBE] Triggering transcription API for module ${moduleId}, video ${videoId}`);
+      
+      // Use the internal API to trigger transcription - this will run asynchronously
+      await fetch('http://localhost:5000/api/llm/transcribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add admin authorization to the request
+          'X-Internal-Request': 'true'
+        },
+        body: JSON.stringify({
+          videoUrl,
+          moduleId,
+          internal: true // Flag to indicate this is an internal request
+        })
+      });
+      
+      console.log(`[AUTO_TRANSCRIBE] Transcription request sent for module ${moduleId}`);
+    } catch (error) {
+      console.error(`[AUTO_TRANSCRIBE] Error starting transcription for module ${moduleId}:`, error);
+    }
+  }
+
   // Create a new module (admin only)
   router.post("/courses/:id/modules", requireAdmin, async (req: Request, res: Response) => {
     try {
@@ -180,6 +229,15 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       });
       
       const module = await storage.createModule(validatedData);
+      
+      // If the module has a video URL, trigger automatic transcription
+      if (module.videoUrl) {
+        // Start transcription generation in the background
+        // We don't await this to avoid blocking the response
+        generateTranscriptionForModule(module.id, module.videoUrl)
+          .catch(error => console.error('[AUTO_TRANSCRIBE] Background transcription error:', error));
+      }
+      
       res.status(201).json(module);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -198,7 +256,22 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         return res.status(404).json({ message: "Module not found" });
       }
       
+      // Check if video URL has changed
+      const oldVideoUrl = module.videoUrl;
+      const newVideoUrl = req.body.videoUrl;
+      
       const updatedModule = await storage.updateModule(req.params.moduleId, req.body);
+      
+      // If video URL has changed and new URL is provided, trigger transcription
+      if (newVideoUrl && oldVideoUrl !== newVideoUrl) {
+        console.log(`[MODULE_UPDATE] Video URL changed from ${oldVideoUrl} to ${newVideoUrl} for module ${module.id}`);
+        
+        // Start transcription generation in the background
+        // We don't await this to avoid blocking the response
+        generateTranscriptionForModule(module.id, newVideoUrl)
+          .catch(error => console.error('[AUTO_TRANSCRIBE] Background transcription error:', error));
+      }
+      
       res.json(updatedModule);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -273,6 +346,8 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       const { courseId, moduleId } = req.params;
       const { progress } = req.body;
       
+      console.log(`[MODULE_PROGRESS] User ${userId} updating progress for module ${moduleId} to ${progress}%`);
+      
       if (typeof progress !== 'number' || progress < 0 || progress > 100) {
         return res.status(400).json({ message: "Invalid progress value" });
       }
@@ -288,34 +363,39 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       // Get user progress for this course
       let userProgress = await storage.getUserCourseProgress(userId, courseId);
       
+      // If progress is at least 95%, we consider the module completed
+      // This is more lenient than requiring 100% and prevents issues with video tracking
+      if (progress >= 95) {
+        console.log(`[MODULE_PROGRESS] Marking module ${moduleId} as completed for user ${userId}`);
+        
+        // Update module completion
+        await storage.updateModuleCompletion(userId, moduleId, true);
+      }
+      
+      // Get all modules and calculate overall course progress
+      const modules = await storage.getCourseModules(courseId);
+      const moduleCount = modules.length;
+      const completedModules = await storage.getCompletedModules(userId, courseId);
+      
+      console.log(`[MODULE_PROGRESS] User has completed ${completedModules.length}/${moduleCount} modules`);
+      
+      // Recalculate overall course progress based on completed modules
+      const allCompleted = completedModules.length === moduleCount;
+      const overallProgress = Math.round((completedModules.length / moduleCount) * 100);
+      
       if (userProgress) {
-        // Calculate overall course progress based on number of modules
-        const modules = await storage.getCourseModules(courseId);
-        const moduleCount = modules.length;
+        // Find the correct current module index
         const currentModuleIndex = modules.findIndex(m => m.id === moduleId);
         
-        // Calculate new overall progress
-        // Completed modules + current module progress percentage
-        const completedModules = currentModuleIndex;
-        const newProgress = Math.round(((completedModules / moduleCount) * 100) + ((progress / 100) * (100 / moduleCount)));
-        
-        // Update progress
+        // Update user course progress with proper values
         userProgress = await storage.updateUserCourseProgress(userProgress.id, {
-          progress: Math.min(newProgress, 100)
+          progress: overallProgress,
+          completed: allCompleted,
+          currentModuleId: moduleId,
+          currentModuleOrder: currentModuleIndex >= 0 ? currentModuleIndex + 1 : module.order
         });
         
-        // Update module completion status if progress is 100%
-        if (progress === 100) {
-          await storage.updateModuleCompletion(userId, moduleId, true);
-          
-          // If all modules are completed, mark the course as completed
-          const completedModules = await storage.getCompletedModules(userId, courseId);
-          if (completedModules.length === moduleCount) {
-            await storage.updateUserCourseProgress(userProgress.id, {
-              completed: true
-            });
-          }
-        }
+        console.log(`[MODULE_PROGRESS] Updated course progress: ${overallProgress}%, completed: ${allCompleted}`);
       } else {
         // Create new progress entry
         userProgress = await storage.createUserCourseProgress({
@@ -323,13 +403,16 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
           courseId,
           currentModuleId: moduleId,
           currentModuleOrder: module.order,
-          progress: progress / 100, // Convert percentage to decimal
-          completed: false
+          progress: overallProgress, // Use calculated progress
+          completed: allCompleted
         });
+        
+        console.log(`[MODULE_PROGRESS] Created new course progress with ${overallProgress}%`);
       }
       
       res.json(userProgress);
     } catch (error) {
+      console.error("Error updating module progress:", error);
       res.status(500).json({ message: "Failed to update progress" });
     }
   });
