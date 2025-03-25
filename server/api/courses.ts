@@ -404,6 +404,40 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       res.status(500).json({ message: "Failed to fetch user courses" });
     }
   });
+  
+  // Enroll in a course
+  router.post("/courses/:id/enroll", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const courseId = req.params.id;
+      
+      // Check if course exists
+      const course = await storage.getCourse(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      // Check if already enrolled
+      const existingProgress = await storage.getUserCourseProgress(userId, courseId);
+      if (existingProgress) {
+        return res.status(400).json({ message: "Already enrolled in this course" });
+      }
+      
+      // Create new progress record
+      const progress = await storage.createUserCourseProgress({
+        userId,
+        courseId,
+        currentModuleId: null,
+        currentModuleOrder: 1,
+        progress: 0,
+        completed: false
+      });
+      
+      res.status(201).json(progress);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to enroll in course" });
+    }
+  });
 
   // Get user profile
   router.get("/user/profile", requireAuth, async (req: Request, res: Response) => {

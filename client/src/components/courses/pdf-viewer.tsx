@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, CheckCircle } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // Set the workerSrc for PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -12,18 +16,41 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 interface PDFViewerProps {
   pdfUrl: string;
   title: string;
+  courseId: string;
+  moduleId: string;
 }
 
-export default function PDFViewer({ pdfUrl, title }: PDFViewerProps) {
+export default function PDFViewer({ pdfUrl, title, courseId, moduleId }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewTime, setViewTime] = useState<number>(0);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [isActive, setIsActive] = useState<boolean>(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
 
+  // Required time in seconds to mark PDF as complete
+  const requiredViewTimeInSeconds = 30;
+  
+  // Update progress mutation
+  const updateProgressMutation = useMutation({
+    mutationFn: async ({ progress }: { progress: number }) => {
+      const res = await apiRequest("POST", `/api/courses/${courseId}/modules/${moduleId}/progress`, { progress });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${courseId}/progress`] });
+    },
+  });
+
+  // Start tracking view time when document loads successfully
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setIsLoading(false);
+    setIsActive(true);
   };
 
   const onDocumentLoadError = (error: Error) => {
@@ -31,23 +58,92 @@ export default function PDFViewer({ pdfUrl, title }: PDFViewerProps) {
     setIsLoading(false);
   };
 
+  // Track view time
+  useEffect(() => {
+    if (isActive && !isCompleted) {
+      timerRef.current = setInterval(() => {
+        setViewTime(prevTime => {
+          const newTime = prevTime + 1;
+          
+          // Mark as complete after required viewing time
+          if (newTime >= requiredViewTimeInSeconds && !isCompleted) {
+            setIsCompleted(true);
+            updateProgressMutation.mutate({ progress: 100 });
+            
+            toast({
+              title: "PDF Material Completed",
+              description: `You have completed viewing "${title}"`,
+            });
+            
+            // Clear the interval once completed
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+            }
+          }
+          
+          return newTime;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isActive, isCompleted, title, updateProgressMutation, toast]);
+
+  // Handle user interactions to ensure they're actively viewing
+  useEffect(() => {
+    const handleUserActivity = () => {
+      if (!isCompleted) {
+        setIsActive(true);
+      }
+    };
+    
+    // Events to track user activity
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity);
+    
+    // Set inactive after 10 seconds of no interaction
+    const inactivityTimeout = setTimeout(() => {
+      if (!isCompleted) {
+        setIsActive(false);
+      }
+    }, 10000);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('scroll', handleUserActivity);
+      clearTimeout(inactivityTimeout);
+    };
+  }, [isCompleted]);
+
   const changePage = (offset: number) => {
     setPageNumber((prevPageNumber) => {
       const newPageNumber = prevPageNumber + offset;
       return numPages ? Math.min(Math.max(1, newPageNumber), numPages) : 1;
     });
+    
+    // Ensure timer is active when user interacts with PDF
+    setIsActive(true);
   };
 
   const zoomIn = () => {
     setScale((prevScale) => Math.min(prevScale + 0.2, 2.0));
+    setIsActive(true);
   };
 
   const zoomOut = () => {
     setScale((prevScale) => Math.max(prevScale - 0.2, 0.6));
+    setIsActive(true);
   };
 
   const handleDownload = () => {
     window.open(pdfUrl, "_blank");
+    setIsActive(true);
   };
 
   return (
