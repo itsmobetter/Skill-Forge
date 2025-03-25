@@ -1065,6 +1065,22 @@ export default function AdminCoursesPage() {
                                     <Pencil className="h-4 w-4" />
                                     <span className="sr-only">Edit</span>
                                   </Button>
+                                  {module.videoUrl && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleGenerateTranscription(module.id, module.videoUrl)}
+                                      disabled={isGeneratingTranscription && transcribingModuleId === module.id}
+                                      title="Generate transcription for this module's video"
+                                    >
+                                      {isGeneratingTranscription && transcribingModuleId === module.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <FileVideo className="h-4 w-4" />
+                                      )}
+                                      <span className="sr-only">Generate Transcription</span>
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="outline"
                                     size="sm"
