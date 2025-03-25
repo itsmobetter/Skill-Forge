@@ -427,7 +427,14 @@ export class MemStorage implements IStorage {
   }
 
   // User course progress
-  async getUserCourses(userId: number): Promise<(Course & { progress: number; completed: boolean })[]> {
+  async getUserCourses(userId: number): Promise<(Course & { 
+    progress: number; 
+    completed: boolean;
+    currentModule?: number;
+    totalModules?: number;
+    quizPassed?: boolean;
+    bestQuizScore?: number; 
+  })[]> {
     const progressRecords = Array.from(this.userCourseProgress.values())
       .filter(progress => progress.userId === userId);
       
@@ -437,10 +444,36 @@ export class MemStorage implements IStorage {
         throw new Error("Course not found");
       }
       
+      // Get all modules for this course
+      const modules = Array.from(this.modules.values())
+        .filter(module => module.courseId === progress.courseId);
+      
+      // Get quiz results for all modules in this course
+      const moduleIds = modules.filter(m => m.hasQuiz).map(m => m.id);
+      let bestScore = 0;
+      let anyPassed = false;
+      
+      if (moduleIds.length > 0) {
+        const quizResults = Array.from(this.quizResults.values())
+          .filter(result => 
+            result.userId === userId && 
+            moduleIds.includes(result.moduleId)
+          );
+          
+        if (quizResults.length > 0) {
+          bestScore = Math.max(...quizResults.map(result => result.score));
+          anyPassed = quizResults.some(result => result.passed);
+        }
+      }
+      
       return {
         ...course,
         progress: progress.progress,
-        completed: progress.completed
+        completed: progress.completed,
+        currentModule: progress.currentModuleOrder,
+        totalModules: modules.length,
+        quizPassed: anyPassed,
+        bestQuizScore: bestScore
       };
     }));
   }
@@ -1024,7 +1057,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User course progress
-  async getUserCourses(userId: number): Promise<(Course & { progress: number; completed: boolean; currentModule?: number; totalModules?: number })[]> {
+  async getUserCourses(userId: number): Promise<(Course & { 
+    progress: number; 
+    completed: boolean; 
+    currentModule?: number; 
+    totalModules?: number;
+    quizPassed?: boolean;
+    bestQuizScore?: number;
+  })[]> {
     return executeQuery(
       async () => {
         console.log(`[USER_COURSES] Fetching courses for user ID: ${userId}`);
@@ -1055,18 +1095,46 @@ export class DatabaseStorage implements IStorage {
               continue;
             }
             
-            // Get module count
+            // Get module count and info
             const modules = await db.select()
               .from(schema.modules)
               .where(eq(schema.modules.courseId, progress.courseId));
               
+            // Calculate quiz performance across all modules in the course
+            let bestScore = 0;
+            let anyPassed = false;
+            
+            // Get all modules with quizzes
+            const moduleIds = modules.filter(m => m.hasQuiz).map(m => m.id);
+            
+            if (moduleIds.length > 0) {
+              // Get all quiz results for this user across all modules in the course
+              const quizResults = await db
+                .select()
+                .from(schema.quizResults)
+                .where(
+                  and(
+                    eq(schema.quizResults.userId, userId),
+                    sql`${schema.quizResults.moduleId} IN (${moduleIds.join(',')})`
+                  )
+                );
+                
+              // Calculate best score and passed status
+              if (quizResults.length > 0) {
+                bestScore = Math.max(...quizResults.map(result => result.score));
+                anyPassed = quizResults.some(result => result.passed);
+              }
+            }
+            
             // Add to result with additional fields
             result.push({
               ...course,
               progress: progress.progress,
               completed: progress.completed,
               currentModule: progress.currentModuleOrder,
-              totalModules: modules.length
+              totalModules: modules.length,
+              quizPassed: anyPassed,
+              bestQuizScore: bestScore
             });
           } catch (err) {
             console.error(`[USER_COURSES] Error fetching details for course ${progress.courseId}:`, err);
