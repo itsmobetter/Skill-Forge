@@ -150,7 +150,8 @@ export default function CourseDetailsPage() {
                 <h1 className="text-2xl font-semibold text-slate-900">{course.title}</h1>
               </div>
               <div className="flex space-x-2">
-                {!userProgress ? (
+                {/* Show enrolled button only if user has a course progress record */}
+                {!userProgress || !Object.keys(userProgress).length ? (
                   <Button 
                     onClick={handleEnrollCourse} 
                     className="flex items-center gap-1"
