@@ -423,10 +423,12 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       console.log(`[ENROLLMENT] Course found: ${course.title}`);
       
       // Check if already enrolled
-      const existingProgress = await storage.getUserCourseProgress(userId, courseId);
+      let existingProgress = await storage.getUserCourseProgress(userId, courseId);
       if (existingProgress) {
         console.log(`[ENROLLMENT] User ${userId} is already enrolled in course ${courseId}`);
-        return res.status(400).json({ message: "Already enrolled in this course" });
+        // Instead of returning an error, return the existing progress
+        // This helps with re-enrollment attempts and fixes UI issues
+        return res.status(200).json(existingProgress);
       }
       
       console.log(`[ENROLLMENT] Creating new enrollment for User ${userId} in Course ${courseId}`);
