@@ -179,7 +179,9 @@ export default function QuizModal({
           <DialogHeader>
             <DialogTitle>Quiz Unavailable</DialogTitle>
             <DialogDescription>
-              The quiz for this module is not available at the moment. Please try again later.
+              The quiz for this module is not available at the moment. This is likely because the 
+              module does not have a valid video transcription, which is required for quiz generation.
+              Contact an administrator to add appropriate video content to this module.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

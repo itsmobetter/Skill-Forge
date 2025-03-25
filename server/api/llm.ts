@@ -294,7 +294,18 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       const transcription = await storage.getModuleTranscription(moduleId);
 
       if (!transcription) {
-        return res.status(404).json({ message: "No transcription found for this module" });
+        return res.status(404).json({ 
+          message: "No transcription found for this module",
+          details: "This module requires a valid video URL to generate a transcription. Please add a valid YouTube video URL to the module and the system will automatically generate a transcription."
+        });
+      }
+      
+      // Make sure transcription text is not empty or too short
+      if (!transcription.text || transcription.text.trim().length < 50) {
+        return res.status(400).json({ 
+          message: "Transcription text is too short or empty",
+          details: "The module has a transcription record, but the text content is insufficient to generate meaningful quiz questions. Please ensure the video has proper audio content that can be transcribed."
+        });
       }
 
       // Create Gemini client
