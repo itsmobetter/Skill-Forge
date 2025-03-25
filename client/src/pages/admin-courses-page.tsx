@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, FileVideo, Upload, ImagePlus, Star, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, FileVideo, Upload, ImagePlus, Star, Loader2, BrainCircuit } from "lucide-react";
 
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,7 @@ export default function AdminCoursesPage() {
   const [isDeleteModuleDialogOpen, setIsDeleteModuleDialogOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
   const [moduleToDelete, setModuleToDelete] = useState<string | null>(null);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
   // Fetch courses
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
@@ -237,6 +238,35 @@ export default function AdminCoursesPage() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+  
+  // Generate quiz for module mutation
+  const generateQuizMutation = useMutation({
+    mutationFn: async (moduleId: string) => {
+      if (!selectedCourse) throw new Error("No course selected");
+      const res = await apiRequest("POST", "/api/llm/generate-quiz", { 
+        courseId: selectedCourse,
+        moduleId,
+        count: 5  // Generate 5 quiz questions
+      });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", selectedCourse, "modules"] });
+      toast({
+        title: "Quiz generated",
+        description: `Successfully generated ${data.count} quiz questions.`,
+      });
+      setIsGeneratingQuiz(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to generate quiz: ${error.message}`,
+        variant: "destructive",
+      });
+      setIsGeneratingQuiz(false);
     },
   });
 
@@ -423,6 +453,12 @@ export default function AdminCoursesPage() {
       return;
     }
     editModuleMutation.mutate(data);
+  };
+  
+  // Handle generate quiz for a module
+  const handleGenerateQuiz = (moduleId: string) => {
+    setIsGeneratingQuiz(true);
+    generateQuizMutation.mutate(moduleId);
   };
 
   return (
