@@ -1043,13 +1043,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserCourseProgress(userId: number, courseId: string): Promise<UserCourseProgress | undefined> {
-    const [progress] = await db.select().from(userCourseProgress)
-      .where(and(
-        eq(userCourseProgress.userId, userId),
-        eq(userCourseProgress.courseId, courseId)
-      ));
-    
-    return progress;
+    return executeQuery(
+      async () => {
+        const [progress] = await db.select().from(schema.userCourseProgress)
+          .where(and(
+            eq(schema.userCourseProgress.userId, userId),
+            eq(schema.userCourseProgress.courseId, courseId)
+          ));
+        
+        return progress;
+      },
+      `Failed to get user course progress for user ${userId} and course ${courseId}`
+    );
   }
 
   async createUserCourseProgress(progress: InsertUserCourseProgress): Promise<UserCourseProgress> {
@@ -1066,183 +1071,278 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserCourseProgress(id: number, progressUpdate: Partial<UserCourseProgress>): Promise<UserCourseProgress> {
-    const [existingProgress] = await db.select().from(userCourseProgress).where(eq(userCourseProgress.id, id));
-    if (!existingProgress) {
-      throw new Error("Progress record not found");
-    }
+    return executeQuery(
+      async () => {
+        const [existingProgress] = await db.select().from(schema.userCourseProgress)
+          .where(eq(schema.userCourseProgress.id, id));
+          
+        if (!existingProgress) {
+          throw new Error("Progress record not found");
+        }
 
-    const [updatedProgress] = await db.update(userCourseProgress)
-      .set(progressUpdate)
-      .where(eq(userCourseProgress.id, id))
-      .returning();
-    
-    return updatedProgress;
+        const [updatedProgress] = await db.update(schema.userCourseProgress)
+          .set(progressUpdate)
+          .where(eq(schema.userCourseProgress.id, id))
+          .returning();
+        
+        return updatedProgress;
+      },
+      `Failed to update user course progress for id ${id}`
+    );
   }
 
   // Module completion
   async getModuleCompletion(userId: number, moduleId: string): Promise<ModuleCompletion | undefined> {
-    const [completion] = await db.select().from(moduleCompletions)
-      .where(and(
-        eq(moduleCompletions.userId, userId),
-        eq(moduleCompletions.moduleId, moduleId)
-      ));
-    
-    return completion;
+    return executeQuery(
+      async () => {
+        const [completion] = await db.select().from(schema.moduleCompletions)
+          .where(and(
+            eq(schema.moduleCompletions.userId, userId),
+            eq(schema.moduleCompletions.moduleId, moduleId)
+          ));
+        
+        return completion;
+      },
+      `Failed to get module completion for user ${userId} and module ${moduleId}`
+    );
   }
 
   async getCompletedModules(userId: number, courseId: string): Promise<ModuleCompletion[]> {
-    const courseModules = await this.getCourseModules(courseId);
-    const moduleIds = courseModules.map(module => module.id);
-    
-    const completions = await db.select().from(moduleCompletions)
-      .where(and(
-        eq(moduleCompletions.userId, userId),
-        eq(moduleCompletions.completed, true)
-      ));
-    
-    return completions.filter(completion => moduleIds.includes(completion.moduleId));
+    return executeQuery(
+      async () => {
+        const courseModules = await this.getCourseModules(courseId);
+        const moduleIds = courseModules.map(module => module.id);
+        
+        const completions = await db.select().from(schema.moduleCompletions)
+          .where(and(
+            eq(schema.moduleCompletions.userId, userId),
+            eq(schema.moduleCompletions.completed, true)
+          ));
+        
+        return completions.filter(completion => moduleIds.includes(completion.moduleId));
+      },
+      `Failed to get completed modules for user ${userId} and course ${courseId}`
+    );
   }
 
   async updateModuleCompletion(userId: number, moduleId: string, completed: boolean): Promise<ModuleCompletion> {
-    const existingCompletion = await this.getModuleCompletion(userId, moduleId);
-    
-    if (existingCompletion) {
-      // Update existing completion
-      const [updatedCompletion] = await db.update(moduleCompletions)
-        .set({
-          completed,
-          completedAt: completed ? new Date() : null,
-        })
-        .where(and(
-          eq(moduleCompletions.userId, userId),
-          eq(moduleCompletions.moduleId, moduleId)
-        ))
-        .returning();
-      
-      return updatedCompletion;
-    } else {
-      // Create new completion
-      const [newCompletion] = await db.insert(moduleCompletions)
-        .values({
-          userId,
-          moduleId,
-          completed,
-          completedAt: completed ? new Date() : null,
-        })
-        .returning();
-      
-      return newCompletion;
-    }
+    return executeQuery(
+      async () => {
+        const existingCompletion = await this.getModuleCompletion(userId, moduleId);
+        
+        if (existingCompletion) {
+          // Update existing completion
+          const [updatedCompletion] = await db.update(schema.moduleCompletions)
+            .set({
+              completed,
+              completedAt: completed ? new Date() : null,
+            })
+            .where(and(
+              eq(schema.moduleCompletions.userId, userId),
+              eq(schema.moduleCompletions.moduleId, moduleId)
+            ))
+            .returning();
+          
+          return updatedCompletion;
+        } else {
+          // Create new completion
+          const [newCompletion] = await db.insert(schema.moduleCompletions)
+            .values({
+              userId,
+              moduleId,
+              completed,
+              completedAt: completed ? new Date() : null,
+            })
+            .returning();
+          
+          return newCompletion;
+        }
+      },
+      `Failed to update module completion for user ${userId} and module ${moduleId}`
+    );
   }
 
   // Quiz management
   async getQuizQuestions(moduleId: string): Promise<QuizQuestion[]> {
-    return await db.select().from(quizQuestions).where(eq(quizQuestions.moduleId, moduleId));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.quizQuestions)
+          .where(eq(schema.quizQuestions.moduleId, moduleId));
+      },
+      `Failed to get quiz questions for module ${moduleId}`
+    );
   }
 
   async createQuizQuestion(question: InsertQuizQuestion): Promise<QuizQuestion> {
-    const id = Math.random().toString(36).substring(2, 11);
-    const [newQuestion] = await db.insert(quizQuestions)
-      .values({...question, id})
-      .returning();
-    
-    return newQuestion;
+    return executeQuery(
+      async () => {
+        const id = Math.random().toString(36).substring(2, 11);
+        const [newQuestion] = await db.insert(schema.quizQuestions)
+          .values({...question, id})
+          .returning();
+        
+        return newQuestion;
+      },
+      `Failed to create quiz question for module ${question.moduleId}`
+    );
   }
 
   async getQuizResults(userId: number, moduleId: string): Promise<QuizResult[]> {
-    return await db.select().from(quizResults)
-      .where(and(
-        eq(quizResults.userId, userId),
-        eq(quizResults.moduleId, moduleId)
-      ));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.quizResults)
+          .where(and(
+            eq(schema.quizResults.userId, userId),
+            eq(schema.quizResults.moduleId, moduleId)
+          ));
+      },
+      `Failed to get quiz results for user ${userId} and module ${moduleId}`
+    );
   }
 
   async createQuizResult(result: InsertQuizResult): Promise<QuizResult> {
-    const [newResult] = await db.insert(quizResults)
-      .values(result)
-      .returning();
-    
-    return newResult;
+    return executeQuery(
+      async () => {
+        const [newResult] = await db.insert(schema.quizResults)
+          .values(result)
+          .returning();
+        
+        return newResult;
+      },
+      `Failed to create quiz result for user ${result.userId} and module ${result.moduleId}`
+    );
   }
 
   // Transcriptions
   async getModuleTranscription(moduleId: string): Promise<ModuleTranscription | undefined> {
-    const [transcription] = await db.select().from(schema.moduleTranscriptions)
-      .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
-    
-    return transcription;
+    return executeQuery(
+      async () => {
+        const [transcription] = await db.select().from(schema.moduleTranscriptions)
+          .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
+        
+        return transcription;
+      },
+      `Failed to get module transcription for module ${moduleId}`
+    );
   }
 
   async createModuleTranscription(transcription: InsertModuleTranscription): Promise<ModuleTranscription> {
-    const [newTranscription] = await db.insert(schema.moduleTranscriptions)
-      .values(transcription)
-      .returning();
-    
-    return newTranscription;
+    return executeQuery(
+      async () => {
+        const [newTranscription] = await db.insert(schema.moduleTranscriptions)
+          .values(transcription)
+          .returning();
+        
+        return newTranscription;
+      },
+      `Failed to create module transcription for module ${transcription.moduleId}`
+    );
   }
 
   async updateModuleTranscription(id: number, transcriptionUpdate: Partial<ModuleTranscription>): Promise<ModuleTranscription> {
-    const [existingTranscription] = await db.select().from(schema.moduleTranscriptions).where(eq(schema.moduleTranscriptions.id, id));
-    if (!existingTranscription) {
-      throw new Error("Transcription not found");
-    }
+    return executeQuery(
+      async () => {
+        const [existingTranscription] = await db.select().from(schema.moduleTranscriptions)
+          .where(eq(schema.moduleTranscriptions.id, id));
+          
+        if (!existingTranscription) {
+          throw new Error("Transcription not found");
+        }
 
-    const [updatedTranscription] = await db.update(schema.moduleTranscriptions)
-      .set(transcriptionUpdate)
-      .where(eq(schema.moduleTranscriptions.id, id))
-      .returning();
-    
-    return updatedTranscription;
+        const [updatedTranscription] = await db.update(schema.moduleTranscriptions)
+          .set(transcriptionUpdate)
+          .where(eq(schema.moduleTranscriptions.id, id))
+          .returning();
+        
+        return updatedTranscription;
+      },
+      `Failed to update module transcription with id ${id}`
+    );
   }
 
   // Chat interactions
   async getChatInteractions(userId: number, courseId: string): Promise<ChatInteraction[]> {
-    return await db.select().from(schema.chatInteractions)
-      .where(and(
-        eq(schema.chatInteractions.userId, userId),
-        eq(schema.chatInteractions.courseId, courseId)
-      ))
-      .orderBy(desc(schema.chatInteractions.timestamp));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.chatInteractions)
+          .where(and(
+            eq(schema.chatInteractions.userId, userId),
+            eq(schema.chatInteractions.courseId, courseId)
+          ))
+          .orderBy(desc(schema.chatInteractions.timestamp));
+      },
+      `Failed to get chat interactions for user ${userId} and course ${courseId}`
+    );
   }
 
   async createChatInteraction(interaction: InsertChatInteraction): Promise<ChatInteraction> {
-    const [newInteraction] = await db.insert(schema.chatInteractions)
-      .values(interaction)
-      .returning();
-    
-    return newInteraction;
+    return executeQuery(
+      async () => {
+        const [newInteraction] = await db.insert(schema.chatInteractions)
+          .values(interaction)
+          .returning();
+        
+        return newInteraction;
+      },
+      `Failed to create chat interaction for user ${interaction.userId} and course ${interaction.courseId}`
+    );
   }
 
   // Certificate management
   async getUserCertificates(userId: number): Promise<Certificate[]> {
-    return await db.select().from(schema.certificates)
-      .where(eq(schema.certificates.userId, userId))
-      .orderBy(desc(schema.certificates.issuedDate));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.certificates)
+          .where(eq(schema.certificates.userId, userId))
+          .orderBy(desc(schema.certificates.issuedDate));
+      },
+      `Failed to get certificates for user ${userId}`
+    );
   }
 
   async getCertificatesByCourse(courseId: string): Promise<Certificate[]> {
-    return await db.select().from(schema.certificates)
-      .where(eq(schema.certificates.courseId, courseId));
+    return executeQuery(
+      async () => {
+        return await db.select().from(schema.certificates)
+          .where(eq(schema.certificates.courseId, courseId));
+      },
+      `Failed to get certificates for course ${courseId}`
+    );
   }
 
   async getCertificate(id: string): Promise<Certificate | undefined> {
-    const [certificate] = await db.select().from(schema.certificates)
-      .where(eq(schema.certificates.id, id));
-    
-    return certificate;
+    return executeQuery(
+      async () => {
+        const [certificate] = await db.select().from(schema.certificates)
+          .where(eq(schema.certificates.id, id));
+        
+        return certificate;
+      },
+      `Failed to get certificate with id ${id}`
+    );
   }
 
   async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
-    const id = Math.random().toString(36).substring(2, 11);
-    const [newCertificate] = await db.insert(schema.certificates)
-      .values({...certificate, id})
-      .returning();
-    
-    return newCertificate;
+    return executeQuery(
+      async () => {
+        const id = Math.random().toString(36).substring(2, 11);
+        const [newCertificate] = await db.insert(schema.certificates)
+          .values({...certificate, id})
+          .returning();
+        
+        return newCertificate;
+      },
+      `Failed to create certificate for user ${certificate.userId} and course ${certificate.courseId}`
+    );
   }
 
   async deleteCertificate(id: string): Promise<void> {
-    await db.delete(schema.certificates).where(eq(schema.certificates.id, id));
+    return executeQuery(
+      async () => {
+        await db.delete(schema.certificates).where(eq(schema.certificates.id, id));
+      },
+      `Failed to delete certificate with id ${id}`
+    );
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
