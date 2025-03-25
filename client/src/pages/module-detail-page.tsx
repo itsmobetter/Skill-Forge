@@ -54,14 +54,49 @@ export default function ModuleDetailPage() {
     enabled: !!courseId
   });
 
+  // Fetch user enrollment status
+  const { data: courseProgress, isLoading: isLoadingProgress } = useQuery({
+    queryKey: ['/api/user/courses', courseId, 'progress'],
+    queryFn: async () => {
+      try {
+        if (!courseId) return null;
+        const res = await apiRequest('GET', `/api/user/courses/${courseId}/progress`);
+        const data = await res.json();
+        setIsEnrolled(true);
+        return data;
+      } catch (error) {
+        // If we get a 401 or 404, it means the user is not enrolled
+        if (error instanceof Error && (error.message.includes('401') || error.message.includes('404'))) {
+          setIsEnrolled(false);
+          return null;
+        }
+        throw error;
+      }
+    },
+    retry: false,
+    enabled: !!courseId
+  });
+
   // Update module progress
   const updateProgress = async (progress: number) => {
     try {
       if (!courseId || !moduleId) return;
       
+      if (!isEnrolled) {
+        toast({
+          title: 'Enrollment Required',
+          description: 'Please enroll in this course to track progress',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       await apiRequest('POST', `/api/courses/${courseId}/modules/${moduleId}/progress`, {
         progress
       });
+      
+      // Update the local progress state
+      setModuleProgress(progress);
       
       if (progress === 100) {
         toast({
@@ -75,12 +110,20 @@ export default function ModuleDetailPage() {
         });
       }
     } catch (error) {
-      console.error('Error updating progress:', error);
-      toast({
-        title: 'Update Failed',
-        description: 'Failed to update progress',
-        variant: 'destructive',
-      });
+      if (error instanceof Error && error.message.includes('401')) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to track progress',
+          variant: 'destructive',
+        });
+      } else {
+        console.error('Error updating progress:', error);
+        toast({
+          title: 'Update Failed',
+          description: 'Failed to update progress',
+          variant: 'destructive',
+        });
+      }
     }
   };
 

@@ -24,8 +24,16 @@ export default function CourseDetailsPage() {
   // Course enrollment mutation
   const enrollMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/courses/${id}/enroll`, {});
-      return await res.json();
+      try {
+        const res = await apiRequest("POST", `/api/courses/${id}/enroll`, {});
+        return await res.json();
+      } catch (error) {
+        // Check if this is an authentication error
+        if (error instanceof Error && error.message.includes("401")) {
+          throw new Error("Please log in to enroll in this course");
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -36,11 +44,21 @@ export default function CourseDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/courses"] });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Enrollment Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error.message.includes("log in")) {
+        // Authentication error, redirect to login
+        navigate("/auth");
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to enroll in courses",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Enrollment Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 

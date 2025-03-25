@@ -31,21 +31,35 @@ interface AnswerSubmission {
   answerId: string;
 }
 
-export default function QuizModal({ isOpen, setIsOpen, courseId, moduleId }: QuizModalProps) {
+export default function QuizModal({ 
+  open, 
+  onClose, 
+  courseId, 
+  moduleId,
+  onQuizComplete
+}: { 
+  open: boolean; 
+  onClose: () => void; 
+  courseId: string; 
+  moduleId: string; 
+  onQuizComplete?: (passed: boolean) => void;
+}) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
-  const [results, setResults] = useState<{ correct: number; total: number; feedback: Record<string, boolean> }>({ 
+  const [results, setResults] = useState<{ correct: number; total: number; feedback: Record<string, boolean>; passed: boolean }>({ 
     correct: 0, 
     total: 0, 
-    feedback: {} 
+    feedback: {},
+    passed: false
   });
   const { toast } = useToast();
 
   // Fetch quiz questions
-  const { data: questions, isLoading } = useQuery<QuizQuestion[]>({
+  const { data: questions, isLoading, isError, error } = useQuery<QuizQuestion[]>({
     queryKey: [`/api/courses/${courseId}/modules/${moduleId}/quiz`],
-    enabled: isOpen,
+    enabled: open,
+    retry: 1,
   });
 
   // Submit answers mutation
