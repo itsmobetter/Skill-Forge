@@ -244,7 +244,7 @@ export default function ModuleDetailPage() {
                       </p>
                       
                       {/* Quiz Results Component */}
-                      <QuizResults moduleId={moduleId || ''} moduleName={module.title} />
+                      <QuizResults moduleId={moduleId || ''} courseId={courseId} moduleName={module.title} />
                       
                       <div className="bg-blue-50 border border-blue-100 p-4 rounded-md">
                         <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
