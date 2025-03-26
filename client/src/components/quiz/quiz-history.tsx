@@ -73,9 +73,9 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
     );
   }
 
-  // Sort results by timestamp (most recent first)
+  // Sort results by completedAt (most recent first)
   const sortedResults = [...quizResults].sort((a, b) => 
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
   );
 
   const getBadgeVariant = (score: number) => {
@@ -113,9 +113,9 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
                   <TableRow key={result.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      {new Date(result.timestamp).toLocaleDateString()}{' '}
+                      {new Date(result.completedAt).toLocaleDateString()}{' '}
                       <span className="text-xs text-muted-foreground">
-                        ({formatDistanceToNow(new Date(result.timestamp), { addSuffix: true })})
+                        ({formatDistanceToNow(new Date(result.completedAt), { addSuffix: true })})
                       </span>
                     </TableCell>
                     <TableCell>
@@ -152,7 +152,7 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
               <CardHeader className="py-4">
                 <CardTitle className="text-base flex items-center justify-between">
                   <span>
-                    Attempt #{attemptIndex + 1} - {new Date(result.timestamp).toLocaleDateString()}
+                    Attempt #{attemptIndex + 1} - {new Date(result.completedAt).toLocaleDateString()}
                   </span>
                   <Badge variant={getBadgeVariant(result.score)}>
                     {result.score}% ({getPassFailText(result.score)})
