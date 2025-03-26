@@ -21,7 +21,7 @@ interface YouTubePlayer {
 }
 
 interface VideoPlayerProps {
-  videoUrl: string;
+  videoUrl: string | null;
   courseId: string;
   moduleId: string;
 }
@@ -39,7 +39,7 @@ export default function VideoPlayer({ videoUrl, courseId, moduleId }: VideoPlaye
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   
-  const videoIdMatch = videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  const videoIdMatch = videoUrl ? videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/) : null;
   const videoId = videoIdMatch ? videoIdMatch[1] : null;
 
   // Mutation to update progress

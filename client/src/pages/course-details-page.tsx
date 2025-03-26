@@ -15,6 +15,17 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Course, Module, Material, UserCourseProgress } from "@shared/schema";
 
+// Type extension to fix type errors
+type ExtendedModule = Module & {
+  tags?: string[];
+  objectives?: string[];
+  videoUrl: string | null;
+};
+
+type ExtendedMaterial = Material & {
+  type: string; // Allow any string type for material
+};
+
 // Extended interface for UserCourseProgress to include the userEnrolled flag
 interface ExtendedUserCourseProgress extends UserCourseProgress {
   userEnrolled?: boolean;
@@ -103,19 +114,19 @@ export default function CourseDetailsPage() {
   });
 
   // Fetch course modules
-  const { data: modules } = useQuery<Module[]>({
+  const { data: modules } = useQuery<ExtendedModule[]>({
     queryKey: [`/api/courses/${id}/modules`],
   });
 
   // Fetch course materials
-  const { data: materials } = useQuery<Material[]>({
+  const { data: materials } = useQuery<ExtendedMaterial[]>({
     queryKey: [`/api/courses/${id}/materials`],
   });
 
   // Get current module based on progress
-  const currentModule = modules?.find((module: Module) => 
+  const currentModule = modules?.find((module: ExtendedModule) => 
     module.order === (userProgress?.currentModuleOrder || 1)
-  );
+  ) as ExtendedModule | undefined;
 
   if (isLoading) {
     return (

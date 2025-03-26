@@ -5,7 +5,7 @@ import { Download, FileText, Table2, File } from "lucide-react";
 interface Material {
   id: string;
   title: string;
-  type: "pdf" | "spreadsheet" | "document";
+  type: string; // Allow any string for type
   fileSize: string;
   url: string;
 }

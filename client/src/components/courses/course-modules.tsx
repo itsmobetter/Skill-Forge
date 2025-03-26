@@ -13,9 +13,11 @@ interface Module {
   description: string;
   order: number;
   duration: string;
-  videoUrl: string;
+  videoUrl: string | null;
   completed: boolean;
   hasQuiz: boolean;
+  tags?: string[];
+  objectives?: string[];
 }
 
 interface CourseModulesProps {
