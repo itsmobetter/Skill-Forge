@@ -40,7 +40,14 @@ export default function QuizModal({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
-  const [results, setResults] = useState<{ correct: number; total: number; feedback: Record<string, boolean>; passed: boolean }>({ 
+  const [startTime, setStartTime] = useState<number>(Date.now());
+  const [results, setResults] = useState<{ 
+    correct: number; 
+    total: number; 
+    feedback: Record<string, boolean>; 
+    passed: boolean;
+    timeSpentSeconds?: number;
+  }>({ 
     correct: 0, 
     total: 0, 
     feedback: {},
@@ -58,7 +65,13 @@ export default function QuizModal({
   // Submit answers mutation
   const submitAnswersMutation = useMutation({
     mutationFn: async (answers: AnswerSubmission[]) => {
-      const res = await apiRequest("POST", `/api/courses/${courseId}/modules/${moduleId}/quiz/submit`, { answers });
+      // Calculate time spent in seconds
+      const timeSpentSeconds = Math.floor((Date.now() - startTime) / 1000);
+      
+      const res = await apiRequest("POST", `/api/courses/${courseId}/modules/${moduleId}/quiz/submit`, { 
+        answers,
+        timeSpentSeconds 
+      });
       return await res.json();
     },
     onSuccess: (data) => {
@@ -67,7 +80,8 @@ export default function QuizModal({
         correct: data.correct,
         total: data.total,
         feedback: data.feedback,
-        passed: passed
+        passed: passed,
+        timeSpentSeconds: data.timeSpentSeconds
       });
       setShowResults(true);
 
@@ -119,6 +133,7 @@ export default function QuizModal({
       setCurrentQuestionIndex(0);
       setSelectedAnswers({});
       setShowResults(false);
+      setStartTime(Date.now()); // Reset start time when quiz opens
     }
   }, [open]);
 
@@ -303,6 +318,11 @@ export default function QuizModal({
               <DialogTitle>Quiz Results</DialogTitle>
               <DialogDescription>
                 You scored {results.correct} out of {results.total} questions correctly.
+                {results.timeSpentSeconds && (
+                  <p className="mt-1 text-sm text-slate-500">
+                    Time taken: {Math.floor(results.timeSpentSeconds / 60)}m {results.timeSpentSeconds % 60}s
+                  </p>
+                )}
               </DialogDescription>
             </DialogHeader>
 

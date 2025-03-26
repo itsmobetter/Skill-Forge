@@ -133,7 +133,8 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
         total,
         score,
         passed,
-        feedback
+        feedback,
+        timeSpentSeconds
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to submit quiz answers" });
