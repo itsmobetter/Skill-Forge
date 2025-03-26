@@ -108,17 +108,24 @@ export function setupAuth(app: Express) {
         isAdmin: isFirstUser // First user is admin, others are regular users
       });
 
-      // Create default profile for the user
-      await storage.createUserProfile({
-        userId: user.id,
-        firstName: req.body.firstName || null,
-        lastName: req.body.lastName || null,
-        email: req.body.email || null,
-        position: req.body.position || null,
-        department: req.body.department || null,
-        about: null,
-        avatarUrl: null
-      });
+      // Create default profile for the user with consistent null values
+      try {
+        console.log(`[Registration] Creating profile for new user ID: ${user.id}`);
+        await storage.createUserProfile({
+          userId: user.id,
+          firstName: req.body.firstName || null,
+          lastName: req.body.lastName || null,
+          email: req.body.email || null,
+          position: req.body.position || null,
+          department: req.body.department || null,
+          about: null,
+          avatarUrl: null
+        });
+        console.log(`[Registration] Profile created successfully for user ID: ${user.id}`);
+      } catch (profileError) {
+        console.error(`[Registration] Error creating profile for user ID: ${user.id}:`, profileError);
+        // Continue with registration even if profile creation fails
+      }
 
       // Create default API settings
       // Make sure temperature is a number (float) not a string

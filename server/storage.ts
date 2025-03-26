@@ -209,25 +209,64 @@ export class MemStorage implements IStorage {
 
   // User profile
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
-    return Array.from(this.userProfiles.values()).find(
-      (profile) => profile.userId === userId
+    console.log(`[MemStorage] Fetching profile for user ID: ${userId}`);
+    
+    // Use a strict equality check (===) to ensure we only get the profile for the exact user
+    // This is crucial to prevent data leakage between accounts
+    const profile = Array.from(this.userProfiles.values()).find(
+      (profile) => profile.userId === userId // Using strict equality
     );
+    
+    console.log(`[MemStorage] Profile found: ${profile ? 'yes' : 'no'}`);
+    if (profile) {
+      console.log(`[MemStorage] Profile ID: ${profile.id}, User ID: ${profile.userId}`);
+    }
+    
+    return profile;
   }
 
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
     const id = this.userProfileIdCounter++;
-    const userProfile: UserProfile = { ...profile, id };
+    
+    // Ensure all fields use null instead of undefined to match the database schema
+    const userProfile: UserProfile = { 
+      id, 
+      userId: profile.userId,
+      firstName: profile.firstName ?? null,
+      lastName: profile.lastName ?? null,
+      email: profile.email ?? null,
+      position: profile.position ?? null,
+      department: profile.department ?? null,
+      about: profile.about ?? null,
+      avatarUrl: profile.avatarUrl ?? null
+    };
+    
+    console.log(`[MemStorage] Creating new profile for user ID: ${profile.userId}, profile ID: ${id}`);
     this.userProfiles.set(id, userProfile);
     return userProfile;
   }
 
   async updateUserProfile(userId: number, profileUpdate: Partial<UserProfile>): Promise<UserProfile> {
+    console.log(`[MemStorage] Updating profile for user ID: ${userId}`);
+    
     const profile = await this.getUserProfile(userId);
     if (!profile) {
+      console.log(`[MemStorage] No profile found for user ID: ${userId}, cannot update`);
       throw new Error("Profile not found");
     }
-
-    const updatedProfile = { ...profile, ...profileUpdate };
+    
+    // Convert any undefined values to null for consistency
+    const normalizedUpdate: Partial<UserProfile> = {};
+    if ('firstName' in profileUpdate) normalizedUpdate.firstName = profileUpdate.firstName ?? null;
+    if ('lastName' in profileUpdate) normalizedUpdate.lastName = profileUpdate.lastName ?? null;
+    if ('email' in profileUpdate) normalizedUpdate.email = profileUpdate.email ?? null;
+    if ('position' in profileUpdate) normalizedUpdate.position = profileUpdate.position ?? null;
+    if ('department' in profileUpdate) normalizedUpdate.department = profileUpdate.department ?? null;
+    if ('about' in profileUpdate) normalizedUpdate.about = profileUpdate.about ?? null;
+    if ('avatarUrl' in profileUpdate) normalizedUpdate.avatarUrl = profileUpdate.avatarUrl ?? null;
+    
+    console.log(`[MemStorage] Updating profile ID: ${profile.id} with normalized values`);
+    const updatedProfile = { ...profile, ...normalizedUpdate };
     this.userProfiles.set(profile.id, updatedProfile);
     return updatedProfile;
   }
@@ -759,6 +798,8 @@ export class DatabaseStorage implements IStorage {
   // User profile
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
     try {
+      console.log(`[DatabaseStorage] Fetching profile for user ID: ${userId}`);
+      
       // Use a strict equality check on userId to ensure we only get the profile for the exact user
       // This prevents potential data leakage between accounts
       const [profile] = await db.select()
@@ -766,20 +807,42 @@ export class DatabaseStorage implements IStorage {
         .where(eq(schema.userProfiles.userId, userId))
         .limit(1);
       
+      console.log(`[DatabaseStorage] Profile found: ${profile ? 'yes' : 'no'}`);
+      if (profile) {
+        console.log(`[DatabaseStorage] Profile ID: ${profile.id}, User ID: ${profile.userId}`);
+      }
+      
       return profile;
     } catch (error) {
-      console.error(`Error fetching user profile for userId ${userId}:`, error);
+      console.error(`[DatabaseStorage] Error fetching user profile for userId ${userId}:`, error);
       return undefined;
     }
   }
 
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
-    const [userProfile] = await db.insert(schema.userProfiles).values(profile).returning();
+    console.log(`[DatabaseStorage] Creating new profile for user ID: ${profile.userId}`);
+    
+    // Ensure all fields use null instead of undefined to match the database schema
+    const profileWithNulls = {
+      userId: profile.userId,
+      firstName: profile.firstName ?? null,
+      lastName: profile.lastName ?? null,
+      email: profile.email ?? null,
+      position: profile.position ?? null,
+      department: profile.department ?? null,
+      about: profile.about ?? null,
+      avatarUrl: profile.avatarUrl ?? null
+    };
+    
+    const [userProfile] = await db.insert(schema.userProfiles).values(profileWithNulls).returning();
+    console.log(`[DatabaseStorage] Profile created with ID: ${userProfile.id}`);
     return userProfile;
   }
 
-  async updateUserProfile(userId: number, profile: Partial<UserProfile>): Promise<UserProfile> {
+  async updateUserProfile(userId: number, profileUpdate: Partial<UserProfile>): Promise<UserProfile> {
     try {
+      console.log(`[DatabaseStorage] Updating profile for user ID: ${userId}`);
+      
       // First get the existing profile with a strict equality check on userId
       const [existingProfile] = await db.select()
         .from(schema.userProfiles)
@@ -787,18 +850,31 @@ export class DatabaseStorage implements IStorage {
         .limit(1);
         
       if (!existingProfile) {
+        console.log(`[DatabaseStorage] No profile found for user ID: ${userId}, cannot update`);
         throw new Error("Profile not found");
       }
+      
+      // Convert any undefined values to null for consistency
+      const normalizedUpdate: Partial<UserProfile> = {};
+      if ('firstName' in profileUpdate) normalizedUpdate.firstName = profileUpdate.firstName ?? null;
+      if ('lastName' in profileUpdate) normalizedUpdate.lastName = profileUpdate.lastName ?? null;
+      if ('email' in profileUpdate) normalizedUpdate.email = profileUpdate.email ?? null;
+      if ('position' in profileUpdate) normalizedUpdate.position = profileUpdate.position ?? null;
+      if ('department' in profileUpdate) normalizedUpdate.department = profileUpdate.department ?? null;
+      if ('about' in profileUpdate) normalizedUpdate.about = profileUpdate.about ?? null;
+      if ('avatarUrl' in profileUpdate) normalizedUpdate.avatarUrl = profileUpdate.avatarUrl ?? null;
+      
+      console.log(`[DatabaseStorage] Updating profile ID: ${existingProfile.id} with normalized values`);
 
       // Update only the profile for the exact user
       const [updatedProfile] = await db.update(schema.userProfiles)
-        .set(profile)
+        .set(normalizedUpdate)
         .where(eq(schema.userProfiles.userId, userId))
         .returning();
       
       return updatedProfile;
     } catch (error) {
-      console.error(`Error updating user profile for userId ${userId}:`, error);
+      console.error(`[DatabaseStorage] Error updating user profile for userId ${userId}:`, error);
       throw error;
     }
   }
