@@ -39,16 +39,14 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
   });
 
   const handleModuleClick = (module: Module) => {
-    // Allow clicking on unlocked or completed modules
-    if (module.order <= currentModuleOrder || module.completed) {
-      // Always update the current module in course progress
-      updateModuleMutation.mutate({ 
-        moduleId: module.id 
-      });
-      
-      // Navigate to module details page
-      navigate(`/courses/${courseId}/modules/${module.id}`);
-    }
+    // Always allow clicking on any module (removed restriction)
+    // Update the current module in course progress
+    updateModuleMutation.mutate({ 
+      moduleId: module.id 
+    });
+    
+    // Navigate to module details page
+    navigate(`/courses/${courseId}/modules/${module.id}`);
   };
   
   const navigateToModuleDetails = (moduleId: string, event: React.MouseEvent) => {
@@ -65,7 +63,8 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
         <div className="space-y-1">
           {modules.map((module) => {
             const isCurrent = module.order === currentModuleOrder;
-            const isLocked = module.order > currentModuleOrder;
+            // Allow access to any module (no locking)
+            const isLocked = false;
             const isCompleted = module.completed;
             
             return (

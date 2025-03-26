@@ -310,32 +310,38 @@ export default function QuizModal({
                 )}
               </div>
 
-              <div className="space-y-3">
-                {questions.map((question, index) => (
-                  <div 
-                    key={question.id} 
-                    className={cn(
-                      "p-3 rounded-lg",
-                      results.feedback[question.id] 
-                        ? "bg-green-50 border border-green-100" 
-                        : "bg-red-50 border border-red-100"
-                    )}
-                  >
-                    <div className="flex items-start">
-                      <div className="mr-2 mt-0.5">
-                        {results.feedback[question.id] ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Question {index + 1}</h4>
-                        <p className="text-sm text-slate-700">{question.text}</p>
+              {/* Add max height with scrolling for long result lists */}
+              <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                {questions.map((question, index) => {
+                  // Determine if the answer was correct - use the feedback map
+                  const isCorrect = results.feedback[question.id] === true;
+                  
+                  return (
+                    <div 
+                      key={question.id} 
+                      className={cn(
+                        "p-3 rounded-lg",
+                        isCorrect 
+                          ? "bg-green-50 border border-green-100" 
+                          : "bg-red-50 border border-red-100"
+                      )}
+                    >
+                      <div className="flex items-start">
+                        <div className="mr-2 mt-0.5">
+                          {isCorrect ? (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-500" />
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Question {index + 1}</h4>
+                          <p className="text-sm text-slate-700">{question.text}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
