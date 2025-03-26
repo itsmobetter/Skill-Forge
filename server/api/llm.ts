@@ -268,7 +268,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
     try {
       // Handle both authenticated users and internal system calls
       let userId: number;
-      const { courseId, moduleId, count = 5, numQuestions, content, internal } = req.body;
+      const { courseId, moduleId, count = 5, numQuestions, content, internal, forceRegenerate } = req.body;
       const finalQuestionCount = numQuestions || count || 5;
       
       // For internal automated quiz generation calls
@@ -391,7 +391,29 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         console.log(`[AUTO_QUIZ] Using course: ${courseTitle}, module: ${moduleTitle}`);
         console.log(`[AUTO_QUIZ] Content length: ${quizContent.length} characters`);
         
-        const generatedQuestions = await gemini.generateQuizQuestions(quizContent, finalQuestionCount);
+        // Check if we should regenerate quiz questions or if there are already existing ones
+        const existingQuestions = await storage.getQuizQuestions(moduleId);
+        
+        if (existingQuestions.length > 0 && !forceRegenerate) {
+          console.log(`[AUTO_QUIZ] Module ${moduleId} already has ${existingQuestions.length} questions and forceRegenerate is not set. Skipping generation.`);
+          return res.json({ 
+            success: true,
+            questionsExisted: true,
+            questionsCount: existingQuestions.length,
+            module: { id: moduleId, title: moduleTitle },
+            course: { id: effectiveCourseId, title: courseTitle }
+          });
+        }
+        
+        // When regenerating, add a hint to ensure different questions 
+        const promptPrefix = forceRegenerate 
+          ? "Please generate completely new and different questions than before. " 
+          : "";
+            
+        const promptWithPrefix = promptPrefix + quizContent;
+        console.log(`[AUTO_QUIZ] ${forceRegenerate ? 'Regenerating' : 'Generating'} quiz with ${finalQuestionCount} questions`);
+        
+        const generatedQuestions = await gemini.generateQuizQuestions(promptWithPrefix, finalQuestionCount);
 
         // Validate the structure of generated questions
         if (!generatedQuestions) {

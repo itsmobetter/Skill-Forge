@@ -186,4 +186,71 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       res.status(500).json({ message: "Failed to fetch quiz results" });
     }
   });
+  
+  // Get quiz questions for history view (with answer info for completed quizzes)
+  router.get("/courses/:courseId/modules/:moduleId/quiz/questions", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { courseId, moduleId } = req.params;
+      
+      // Verify the course and module exist
+      const course = await storage.getCourse(courseId);
+      const module = await storage.getModule(moduleId);
+      
+      if (!course || !module || module.courseId !== courseId) {
+        return res.status(404).json({ message: "Course or module not found" });
+      }
+      
+      // Get quiz questions with all information including correct answers
+      // This is safe because it's only used for viewing history after completion
+      const questions = await storage.getQuizQuestions(moduleId);
+      
+      res.json(questions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch quiz questions with answers" });
+    }
+  });
+  
+  // Regenerate quiz questions for a module
+  router.post("/courses/:courseId/modules/:moduleId/quiz/regenerate", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { courseId, moduleId } = req.params;
+      
+      // Verify the course and module exist
+      const course = await storage.getCourse(courseId);
+      const module = await storage.getModule(moduleId);
+      
+      if (!course || !module || module.courseId !== courseId) {
+        return res.status(404).json({ message: "Course or module not found" });
+      }
+      
+      // Make an internal request to the LLM service to generate new quiz questions
+      // This reuses the existing endpoint but forces regeneration
+      const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/llm/generate-quiz`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Request': 'true'
+        },
+        body: JSON.stringify({
+          courseId,
+          moduleId,
+          count: 5,  // Default to 5 questions
+          internal: true,
+          forceRegenerate: true  // Signal that this is a regeneration request
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        return res.status(response.status).json(errorData);
+      }
+      
+      const result = await response.json();
+      res.json(result);
+    } catch (error) {
+      console.error("Quiz regeneration error:", error);
+      res.status(500).json({ message: "Failed to regenerate quiz questions", error: (error as Error).message });
+    }
+  });
 }
