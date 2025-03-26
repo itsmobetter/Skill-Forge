@@ -25,18 +25,8 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         id: transcription.id,
         moduleId: transcription.moduleId,
         videoId: transcription.videoId,
-        text: transcription.text,
-        lastUpdated: transcription.lastUpdated
+        text: transcription.text
       };
-      
-      // Only include optional fields if they exist
-      if ('timestampedText' in transcription && transcription['timestampedText']) {
-        safeTranscription.timestampedText = transcription['timestampedText'];
-      }
-      
-      if ('vectorId' in transcription && transcription['vectorId']) {
-        safeTranscription.vectorId = transcription['vectorId'];
-      }
       
       res.json(safeTranscription);
     } catch (error) {
