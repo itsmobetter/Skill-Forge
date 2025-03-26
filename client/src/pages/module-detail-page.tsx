@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useRoute } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, BookOpen, Video, File, CheckCircle, Circle, PencilRuler } from 'lucide-react';
+import { Loader2, BookOpen, Video, File, CheckCircle, Circle, PencilRuler, History, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TranscriptViewer } from '@/components/module/transcript-viewer';
 import { GenerateQuizButton } from '@/components/module/generate-quiz-button';
 import QuizResults from '@/components/quiz/quiz-results';
+import QuizHistory from '@/components/quiz/quiz-history';
 import QuizModal from '@/components/quiz/quiz-modal';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -194,7 +195,7 @@ export default function ModuleDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className={`grid w-full ${module.hasQuiz ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsList className={`grid w-full ${module.hasQuiz ? 'grid-cols-5' : 'grid-cols-3'}`}>
               <TabsTrigger value="video" className="flex items-center gap-2">
                 <Video className="h-4 w-4" />
                 Video
@@ -207,10 +208,18 @@ export default function ModuleDetailPage() {
                 <BookOpen className="h-4 w-4" />
                 Transcript
               </TabsTrigger>
-              <TabsTrigger value="quiz" className="flex items-center gap-2">
-                <PencilRuler className="h-4 w-4" />
-                Quiz
-              </TabsTrigger>
+              {module.hasQuiz && (
+                <>
+                  <TabsTrigger value="quiz" className="flex items-center gap-2">
+                    <PencilRuler className="h-4 w-4" />
+                    Quiz
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    History
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
             
             <TabsContent value="video" className="mt-4">
@@ -344,6 +353,24 @@ export default function ModuleDetailPage() {
                     </Button>
                   </CardFooter>
                 )}
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="history" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Quiz History</CardTitle>
+                  <CardDescription>
+                    View your previous quiz attempts and results
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <QuizHistory 
+                    moduleId={moduleId || ''} 
+                    courseId={courseId || ''} 
+                    moduleName={module.title} 
+                  />
+                </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
