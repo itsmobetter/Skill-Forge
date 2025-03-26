@@ -297,16 +297,21 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         return res.status(400).json({ message: "Module ID is required" });
       }
 
-      // Get the course and module info
-      const course = await storage.getCourse(courseId);
+      // Get the module info first
       const module = await storage.getModule(moduleId);
-
+      
+      if (!module) {
+        return res.status(404).json({ message: "Module not found" });
+      }
+      
+      // If courseId wasn't provided, get it from the module
+      const effectiveCourseId = courseId || module.courseId;
+      
+      // Now get the course info
+      const course = await storage.getCourse(effectiveCourseId);
+      
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
-      }
-
-      if (!module || module.courseId !== courseId) {
-        return res.status(404).json({ message: "Module not found" });
       }
 
       // Initialize course and module information with defaults
@@ -329,27 +334,6 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       if (content && typeof content === 'string' && content.trim().length > 100) {
         console.log(`[AUTO_QUIZ] Using provided content for quiz generation (${content.length} characters)`);
         quizContent = content;
-        
-        // For internal requests without courseId, try to get it from the module
-        if (moduleId && (!courseId || courseId === undefined)) {
-          try {
-            const moduleData = await storage.getModule(moduleId);
-            if (moduleData) {
-              // Use the module's course ID to get the course info
-              const courseData = await storage.getCourse(moduleData.courseId);
-              if (courseData) {
-                // Update titles with detailed data
-                courseTitle = courseData.title;
-                moduleTitle = moduleData.title;
-                
-                console.log(`[AUTO_QUIZ] Using course: ${courseTitle}, module: ${moduleTitle}`);
-              }
-            }
-          } catch (error) {
-            console.log(`[AUTO_QUIZ] Error getting course data from module: ${error}`);
-            // Continue with default titles - it's not critical
-          }
-        }
       } else {
         // Otherwise, get the module transcription
         const transcription = await storage.getModuleTranscription(moduleId);
