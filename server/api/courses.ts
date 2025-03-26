@@ -642,14 +642,36 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
   router.get("/user/profile", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
+      console.log(`[PROFILE] Fetching profile for user ID: ${userId}, username: ${req.user!.username}`);
+      
       const profile = await storage.getUserProfile(userId);
       
       if (!profile) {
-        return res.status(404).json({ message: "Profile not found" });
+        console.log(`[PROFILE] No profile found for user ID: ${userId}`);
+        
+        // Create a default profile if one doesn't exist
+        console.log(`[PROFILE] Creating default profile for user ID: ${userId}`);
+        const defaultProfile = await storage.createUserProfile({
+          userId: userId,
+          firstName: null,
+          lastName: null,
+          email: req.user!.email || null,
+          position: null,
+          department: null,
+          about: null,
+          avatarUrl: null
+        });
+        
+        console.log(`[PROFILE] Returning newly created profile: ${JSON.stringify(defaultProfile)}`);
+        return res.json(defaultProfile);
       }
+      
+      console.log(`[PROFILE] Found profile for user ID: ${userId}, profile ID: ${profile.id}`);
+      console.log(`[PROFILE] Profile data: ${JSON.stringify(profile)}`);
       
       res.json(profile);
     } catch (error) {
+      console.error(`[PROFILE] Error fetching profile for user ID: ${userId}:`, error);
       res.status(500).json({ message: "Failed to fetch profile" });
     }
   });
