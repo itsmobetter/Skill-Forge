@@ -1321,15 +1321,40 @@ export class DatabaseStorage implements IStorage {
 
   // Transcriptions
   async getModuleTranscription(moduleId: string): Promise<ModuleTranscription | undefined> {
-    return executeQuery(
-      async () => {
-        const [transcription] = await db.select().from(schema.moduleTranscriptions)
-          .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
-        
-        return transcription;
-      },
-      `Failed to get module transcription for module ${moduleId}`
-    );
+    try {
+      // First attempt - try selecting all fields (this might fail if schema doesn't match)
+      return await executeQuery(
+        async () => {
+          const [transcription] = await db.select().from(schema.moduleTranscriptions)
+            .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
+          
+          return transcription;
+        },
+        `Failed to get module transcription for module ${moduleId}`
+      );
+    } catch (error) {
+      console.log(`Error with full transcription query, trying with specific fields: ${error}`);
+      
+      // Second attempt - select only specific fields that are guaranteed to exist
+      return await executeQuery(
+        async () => {
+          const [transcription] = await db.select({
+            id: schema.moduleTranscriptions.id,
+            moduleId: schema.moduleTranscriptions.moduleId,
+            videoId: schema.moduleTranscriptions.videoId,
+            text: schema.moduleTranscriptions.text,
+            // Excluding potentially problematic fields:
+            // - timestampedText
+            // - vectorId
+            lastUpdated: schema.moduleTranscriptions.lastUpdated
+          }).from(schema.moduleTranscriptions)
+            .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
+          
+          return transcription;
+        },
+        `Failed to get module transcription with limited fields for module ${moduleId}`
+      );
+    }
   }
 
   async createModuleTranscription(transcription: InsertModuleTranscription): Promise<ModuleTranscription> {

@@ -19,7 +19,20 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         return res.status(404).json({ message: "No transcription found for this module" });
       }
       
-      res.json(transcription);
+      // Send only the fields that are guaranteed to exist in the database schema
+      // This prevents errors when the schema is out of sync
+      const safeTranscription = {
+        id: transcription.id,
+        moduleId: transcription.moduleId,
+        videoId: transcription.videoId,
+        text: transcription.text,
+        // Only include the timestampedText field if it exists
+        ...(transcription.timestampedText && { timestampedText: transcription.timestampedText }),
+        ...(transcription.vectorId && { vectorId: transcription.vectorId }),
+        lastUpdated: transcription.lastUpdated
+      };
+      
+      res.json(safeTranscription);
     } catch (error) {
       console.error("Error fetching module transcription:", error);
       res.status(500).json({ message: "Failed to fetch module transcription" });
