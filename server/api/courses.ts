@@ -195,8 +195,8 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         } else if (existingTranscription) {
           console.log(`[AUTO_TRANSCRIBE] Transcription exists but might be incomplete for module ${moduleId}, regenerating...`);
         }
-      } catch (error) {
-        console.log(`[AUTO_TRANSCRIBE] Error checking existing transcription, will create a new one: ${error.message}`);
+      } catch (error: any) {
+        console.log(`[AUTO_TRANSCRIBE] Error checking existing transcription, will create a new one: ${error?.message || 'Unknown error'}`);
       }
       
       console.log(`[AUTO_TRANSCRIBE] Triggering transcription API for module ${moduleId}, video ${videoId}`);
@@ -223,8 +223,8 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         } else {
           console.log(`[AUTO_TRANSCRIBE] Transcription API request successful for module ${moduleId}`);
         }
-      } catch (fetchError) {
-        console.error(`[AUTO_TRANSCRIBE] Error calling transcription API: ${fetchError.message}`);
+      } catch (fetchError: any) {
+        console.error(`[AUTO_TRANSCRIBE] Error calling transcription API: ${fetchError?.message || 'Unknown error'}`);
       }
       
       console.log(`[AUTO_TRANSCRIBE] Transcription request sent for module ${moduleId}`);

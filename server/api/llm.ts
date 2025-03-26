@@ -460,17 +460,19 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           try {
             if (existingTranscription) {
               // Create an update object with basic fields first
-              const updateData: Partial<ModuleTranscription> = { 
+              // Use a plain object to avoid TypeScript errors with timestampedText field
+              const updateData: any = { 
                 text: transcript,
                 videoId,
                 vectorId: vectorId || existingTranscription.vectorId
               };
               
-              // Only add timestampedText if it exists in the database schema
-              try {
+              // If segments exist, try to add them to the update
+              if (segments && segments.length > 0) {
+                console.log(`[TRANSCRIPTION] Adding ${segments.length} timestamped segments`);
+                // We'll try to add this field, but it might not exist in the database schema
+                // Let the database driver handle any errors during update
                 updateData.timestampedText = segments;
-              } catch (schemaError) {
-                console.log("[TRANSCRIPTION] timestampedText field not available in schema, skipping...");
               }
               
               await storage.updateModuleTranscription(existingTranscription.id, updateData);
@@ -483,11 +485,12 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
                 vectorId
               };
               
-              // Only add timestampedText if it exists in the database schema
-              try {
+              // If segments exist, try to add them to the insert data
+              if (segments && segments.length > 0) {
+                console.log(`[TRANSCRIPTION] Adding ${segments.length} timestamped segments to new transcription`);
+                // We'll try to add this field, but it might not exist in the database schema
+                // Let the database driver handle any errors during insert
                 transcriptionData.timestampedText = segments;
-              } catch (schemaError) {
-                console.log("[TRANSCRIPTION] timestampedText field not available in schema, skipping...");
               }
               
               await storage.createModuleTranscription(transcriptionData);
