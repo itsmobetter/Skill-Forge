@@ -71,6 +71,16 @@ export default function QuizModal({
       });
       setShowResults(true);
 
+      // Always invalidate quiz results query to update history
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/courses/${courseId}/modules/${moduleId}/quiz/results`] 
+      });
+      
+      // Also invalidate quiz questions to ensure fresh data on retries
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/courses/${courseId}/modules/${moduleId}/quiz`] 
+      });
+
       // If passed, invalidate the course progress
       if (passed) {
         queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${courseId}/progress`] });
@@ -83,8 +93,15 @@ export default function QuizModal({
         if (onQuizComplete) {
           onQuizComplete(true);
         }
-      } else if (onQuizComplete) {
-        onQuizComplete(false);
+      } else {
+        toast({
+          title: "Quiz Attempt Recorded",
+          description: "You can review your results and try again. You need 80% to pass.",
+        });
+        
+        if (onQuizComplete) {
+          onQuizComplete(false);
+        }
       }
     },
     onError: (error: Error) => {

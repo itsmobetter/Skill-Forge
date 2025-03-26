@@ -79,9 +79,13 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
   );
 
   const getBadgeVariant = (score: number) => {
-    if (score >= 80) return 'success'; 
-    if (score >= 60) return 'warning';
-    return 'destructive';
+    return 'default'; // Using default variant with custom styling below
+  };
+  
+  const getBadgeStyle = (score: number) => {
+    if (score >= 80) return 'bg-green-100 text-green-800'; 
+    if (score >= 60) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
   };
 
   const getPassFailText = (score: number) => {
@@ -101,10 +105,10 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead width="5%">#</TableHead>
+                  <TableHead className="w-[5%]">#</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead width="15%">Score</TableHead>
-                  <TableHead width="15%">Status</TableHead>
+                  <TableHead className="w-[15%]">Score</TableHead>
+                  <TableHead className="w-[15%]">Status</TableHead>
                   <TableHead>Time Spent</TableHead>
                 </TableRow>
               </TableHeader>
@@ -122,14 +126,14 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
                       <span className="font-medium">{result.score}%</span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getBadgeVariant(result.score)}>
+                      <Badge variant={getBadgeVariant(result.score)} className={getBadgeStyle(result.score)}>
                         {getPassFailText(result.score)}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {result.timeSpent ? `${Math.round(result.timeSpent / 60)} min` : 'N/A'}
+                        Not tracked
                       </span>
                     </TableCell>
                   </TableRow>
@@ -154,7 +158,7 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
                   <span>
                     Attempt #{attemptIndex + 1} - {new Date(result.completedAt).toLocaleDateString()}
                   </span>
-                  <Badge variant={getBadgeVariant(result.score)}>
+                  <Badge variant={getBadgeVariant(result.score)} className={getBadgeStyle(result.score)}>
                     {result.score}% ({getPassFailText(result.score)})
                   </Badge>
                 </CardTitle>
