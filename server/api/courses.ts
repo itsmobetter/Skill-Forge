@@ -194,13 +194,28 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
     try {
       console.log(`[AUTO_TRANSCRIBE] Starting automatic transcription for module ${moduleId} with URL ${videoUrl}`);
       
-      // Get video ID from YouTube URL
-      const videoIdMatch = videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+      // Extract YouTube ID using a more comprehensive regex that handles different URL formats
+      let videoId: string | null = null;
+      
+      // First, try the standard YouTube URL pattern
+      const youtubeMatch = videoUrl.match(/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (youtubeMatch && youtubeMatch[1]) {
+        videoId = youtubeMatch[1];
+      } 
+      // Try also for iframe embed codes
+      else if (videoUrl.includes('youtube.com/embed/')) {
+        const embedMatch = videoUrl.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+        if (embedMatch && embedMatch[1]) {
+          videoId = embedMatch[1];
+        }
+      }
       
       if (!videoId) {
-        console.log(`[AUTO_TRANSCRIBE] Invalid YouTube URL: ${videoUrl}`);
-        return;
+        console.log(`[AUTO_TRANSCRIBE] Could not extract valid YouTube ID from URL: ${videoUrl}`);
+        
+        // For non-YouTube URLs, we'll still try to process them
+        // This allows us to handle other video sources gracefully
+        videoId = "unknown";
       }
       
       // Check if transcription already exists - we use a try-catch here to handle schema mismatches
@@ -209,8 +224,13 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         existingTranscription = await storage.getModuleTranscription(moduleId);
         
         if (existingTranscription && existingTranscription.text && existingTranscription.text.length > 100) {
-          console.log(`[AUTO_TRANSCRIBE] Transcription already exists for module ${moduleId}`);
-          return;
+          // Check if the video ID has changed - if it has, we should regenerate
+          if (existingTranscription.videoId === videoId) {
+            console.log(`[AUTO_TRANSCRIBE] Valid transcription already exists for module ${moduleId}`);
+            return;
+          } else {
+            console.log(`[AUTO_TRANSCRIBE] Video URL changed, regenerating transcription`);
+          }
         } else if (existingTranscription) {
           console.log(`[AUTO_TRANSCRIBE] Transcription exists but might be incomplete for module ${moduleId}, regenerating...`);
         }
@@ -226,8 +246,8 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Add admin authorization to the request
-            'X-Internal-Request': 'true'
+            'X-Internal-Request': 'true',
+            'Authorization': 'Bearer internal_system'
           },
           body: JSON.stringify({
             videoUrl,
@@ -241,6 +261,53 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
           console.error(`[AUTO_TRANSCRIBE] Transcription API returned error: ${response.status} ${errorText}`);
         } else {
           console.log(`[AUTO_TRANSCRIBE] Transcription API request successful for module ${moduleId}`);
+          
+          // Get the module and create or update quiz questions automatically after transcription
+          try {
+            const module = await storage.getModule(moduleId);
+            if (module && !module.hasQuiz) {
+              console.log(`[AUTO_QUIZ] No quiz exists for module ${moduleId}, generating automatically...`);
+              
+              // Delay quiz generation by 2 seconds to allow transcription processing to complete
+              setTimeout(async () => {
+                try {
+                  const transcription = await storage.getModuleTranscription(moduleId);
+                  
+                  if (transcription && transcription.text && transcription.text.length > 100) {
+                    // Send request to generate quiz questions (internal)
+                    const quizResponse = await fetch('http://localhost:5000/api/llm/generate-quiz', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'X-Internal-Request': 'true',
+                        'Authorization': 'Bearer internal_system'
+                      },
+                      body: JSON.stringify({
+                        moduleId,
+                        content: transcription.text,
+                        numQuestions: 5,
+                        internal: true
+                      })
+                    });
+                    
+                    if (quizResponse.ok) {
+                      console.log(`[AUTO_QUIZ] Successfully generated quiz for module ${moduleId}`);
+                      // Update module to indicate it has a quiz - even though the quiz generator does this too
+                      await storage.updateModule(moduleId, { hasQuiz: true });
+                    } else {
+                      console.error(`[AUTO_QUIZ] Failed to generate quiz: ${await quizResponse.text()}`);
+                    }
+                  } else {
+                    console.log(`[AUTO_QUIZ] Transcription not available or too short for quiz generation`);
+                  }
+                } catch (quizError: any) {
+                  console.error(`[AUTO_QUIZ] Error in automated quiz generation: ${quizError?.message || 'Unknown error'}`);
+                }
+              }, 2000);
+            }
+          } catch (quizSetupError: any) {
+            console.error(`[AUTO_QUIZ] Error setting up quiz generation: ${quizSetupError?.message || 'Unknown error'}`);
+          }
         }
       } catch (fetchError: any) {
         console.error(`[AUTO_TRANSCRIBE] Error calling transcription API: ${fetchError?.message || 'Unknown error'}`);

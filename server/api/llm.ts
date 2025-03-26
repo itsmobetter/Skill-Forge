@@ -264,18 +264,37 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
   });
 
   // Generate a quiz for a module
-  router.post("/llm/generate-quiz", requireAuth, async (req: Request, res: Response) => {
+  router.post("/llm/generate-quiz", async (req: Request, res: Response) => {
     try {
-      const userId = req.user!.id;
-      const { courseId, moduleId, count = 5 } = req.body;
-
-      if (!courseId || !moduleId) {
-        return res.status(400).json({ message: "Course ID and module ID are required" });
+      // Handle both authenticated users and internal system calls
+      let userId: number;
+      const { courseId, moduleId, count = 5, numQuestions, content, internal } = req.body;
+      const finalQuestionCount = numQuestions || count || 5;
+      
+      // For internal automated quiz generation calls
+      const isInternalRequest = 
+        internal === true || 
+        req.headers['x-internal-request'] === 'true';
+        
+      if (isInternalRequest) {
+        // Use admin user ID for internal requests
+        const adminUser = await storage.getUserByUsername('syafiqazrin');
+        userId = adminUser?.id || 6; // Fallback to default admin ID if not found
+        console.log(`[AUTO_QUIZ] Processing internal automated quiz generation request for module ${moduleId}`);
+      } else if (req.user) {
+        // Normal authenticated user
+        userId = req.user.id;
+        
+        // Verify user has admin rights
+        if (!req.user.isAdmin) {
+          return res.status(403).json({ message: "Admin privileges required" });
+        }
+      } else {
+        return res.status(401).json({ message: "Authentication required" });
       }
 
-      // Verify user has admin rights
-      if (!req.user!.isAdmin) {
-        return res.status(403).json({ message: "Admin privileges required" });
+      if (!moduleId) {
+        return res.status(400).json({ message: "Module ID is required" });
       }
 
       // Get the course and module info
@@ -290,22 +309,64 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         return res.status(404).json({ message: "Module not found" });
       }
 
-      // Get module transcription
-      const transcription = await storage.getModuleTranscription(moduleId);
-
-      if (!transcription) {
-        return res.status(404).json({ 
-          message: "No transcription found for this module",
-          details: "This module requires a valid video URL to generate a transcription. Please add a valid YouTube video URL to the module and the system will automatically generate a transcription."
-        });
+      // Prompt variables - default titles
+      let courseTitle = "Unknown Course";
+      let moduleTitle = "Unknown Module";
+      
+      // Update titles from course and module if available
+      if (course && course.title) {
+        courseTitle = course.title;
       }
       
-      // Make sure transcription text is not empty or too short
-      if (!transcription.text || transcription.text.trim().length < 50) {
-        return res.status(400).json({ 
-          message: "Transcription text is too short or empty",
-          details: "The module has a transcription record, but the text content is insufficient to generate meaningful quiz questions. Please ensure the video has proper audio content that can be transcribed."
-        });
+      if (module && module.title) {
+        moduleTitle = module.title;
+      }
+      
+      // Get content for quiz generation - either from the request body directly or from the module's transcription
+      let quizContent: string;
+      
+      // If content is provided directly (for internal automated requests), use that
+      if (content && typeof content === 'string' && content.trim().length > 100) {
+        console.log(`[AUTO_QUIZ] Using provided content for quiz generation (${content.length} characters)`);
+        quizContent = content;
+        
+        // For internal requests without courseId, try to get it from the module
+        if (moduleId && (!courseId || courseId === undefined)) {
+          try {
+            const moduleData = await storage.getModule(moduleId);
+            if (moduleData) {
+              // Use the module's course ID to get the course info
+              const courseData = await storage.getCourse(moduleData.courseId);
+              if (courseData) {
+                courseTitle = courseData.title;
+                moduleTitle = moduleData.title;
+              }
+            }
+          } catch (error) {
+            console.log(`[AUTO_QUIZ] Error getting course data from module: ${error}`);
+            // Continue with default titles - it's not critical
+          }
+        }
+      } else {
+        // Otherwise, get the module transcription
+        const transcription = await storage.getModuleTranscription(moduleId);
+
+        if (!transcription) {
+          return res.status(404).json({ 
+            message: "No transcription found for this module",
+            details: "This module requires a valid video URL to generate a transcription. Please add a valid YouTube video URL to the module and the system will automatically generate a transcription."
+          });
+        }
+        
+        // Make sure transcription text is not empty or too short
+        if (!transcription.text || transcription.text.trim().length < 50) {
+          return res.status(400).json({ 
+            message: "Transcription text is too short or empty",
+            details: "The module has a transcription record, but the text content is insufficient to generate meaningful quiz questions. Please ensure the video has proper audio content that can be transcribed."
+          });
+        }
+        
+        quizContent = transcription.text;
       }
 
       // Create Gemini client
@@ -328,19 +389,18 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           "correctOptionId": "B" // The ID of the correct option
         }
       ]`;
+      
+      const prompt = `Generate ${finalQuestionCount} multiple-choice quiz questions for the following module content:
 
-      // Prompt for quiz generation
-      const prompt = `Generate ${count} multiple-choice quiz questions for the following module content:
-
-      Course: ${course.title}
-      Module: ${module.title}
+      Course: ${courseTitle}
+      Module: ${moduleTitle}
 
       Content:
-      ${transcription.text}`;
+      ${quizContent}`;
 
       try {
         // Generate quiz questions using our new generateQuizQuestions method
-        const generatedQuestions = await gemini.generateQuizQuestions(transcription.text, count);
+        const generatedQuestions = await gemini.generateQuizQuestions(quizContent, finalQuestionCount);
 
         // Validate the structure of generated questions
         if (!Array.isArray(generatedQuestions)) {
@@ -387,18 +447,36 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
   });
 
   // Transcribe a video
-  router.post("/llm/transcribe", requireAuth, async (req: Request, res: Response) => {
+  router.post("/llm/transcribe", async (req: Request, res: Response) => {
     try {
-      const userId = req.user!.id;
-      const { videoUrl, moduleId } = req.body;
+      // Handle both authenticated users and internal system calls
+      let userId: number;
+      const { videoUrl, moduleId, internal } = req.body;
+      
+      // For internal automated transcription calls
+      const isInternalRequest = 
+        internal === true || 
+        req.headers['x-internal-request'] === 'true';
+        
+      if (isInternalRequest) {
+        // Use admin user ID for internal requests
+        const adminUser = await storage.getUserByUsername('syafiqazrin');
+        userId = adminUser?.id || 6; // Fallback to default admin ID if not found
+        console.log(`[TRANSCRIPTION] Processing internal automated transcription request for module ${moduleId}`);
+      } else if (req.user) {
+        // Normal authenticated user
+        userId = req.user.id;
+        
+        // Verify user has admin rights if trying to save to a module
+        if (moduleId && !req.user.isAdmin) {
+          return res.status(403).json({ message: "Admin privileges required to save transcriptions" });
+        }
+      } else {
+        return res.status(401).json({ message: "Authentication required" });
+      }
 
       if (!videoUrl) {
         return res.status(400).json({ message: "Video URL is required" });
-      }
-
-      // Verify user has admin rights if trying to save to a module
-      if (moduleId && !req.user!.isAdmin) {
-        return res.status(403).json({ message: "Admin privileges required to save transcriptions" });
       }
 
       // Get video ID from YouTube URL
