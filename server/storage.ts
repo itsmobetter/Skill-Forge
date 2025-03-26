@@ -1423,6 +1423,15 @@ export class DatabaseStorage implements IStorage {
   async getQuizResults(userId: number, moduleId: string): Promise<QuizResult[]> {
     return executeQuery(
       async () => {
+        // If moduleId is 'any', get all quiz results for the user regardless of module
+        if (moduleId === 'any') {
+          return await db.select().from(schema.quizResults)
+            .where(eq(schema.quizResults.userId, userId))
+            .orderBy(desc(schema.quizResults.completedAt))
+            .limit(10); // Limit to the most recent 10 results for debug purposes
+        }
+        
+        // Otherwise, filter by both userId and moduleId as before
         return await db.select().from(schema.quizResults)
           .where(and(
             eq(schema.quizResults.userId, userId),

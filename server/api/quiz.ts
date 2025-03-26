@@ -24,11 +24,11 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           passed: r.passed,
           completedAt: r.completedAt,
           timeSpentSeconds: r.timeSpentSeconds,
-          hasQuestions: r.questions ? r.questions.length : 0,
-          hasAnswers: r.answers ? r.answers.length : 0,
+          hasQuestions: Array.isArray(r.questions) ? r.questions.length : 0,
+          hasAnswers: Array.isArray(r.answers) ? r.answers.length : 0,
           // Show a sample of the actual data structure
-          sampleQuestion: r.questions && r.questions.length > 0 ? r.questions[0] : null,
-          sampleAnswer: r.answers && r.answers.length > 0 ? r.answers[0] : null
+          sampleQuestion: Array.isArray(r.questions) && r.questions.length > 0 ? r.questions[0] : null,
+          sampleAnswer: Array.isArray(r.answers) && r.answers.length > 0 ? r.answers[0] : null
         }))
       });
     } catch (error) {
