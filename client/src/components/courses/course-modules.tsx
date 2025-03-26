@@ -63,8 +63,8 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
         <div className="space-y-1">
           {modules.map((module) => {
             const isCurrent = module.order === currentModuleOrder;
-            // Allow access to any module (no locking)
-            const isLocked = false;
+            // Module is locked if it's beyond the current module order and not completed
+            const isLocked = module.order > currentModuleOrder && !module.completed;
             const isCompleted = module.completed;
             
             return (

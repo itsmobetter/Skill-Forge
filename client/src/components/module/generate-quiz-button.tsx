@@ -67,13 +67,13 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
     generateQuizMutation.mutate();
   };
 
-  if (!isAdmin) {
-    return null;
-  }
+  // Allow all users to generate quizzes
+  // Only show a different button style for non-admin users
+  const buttonVariant = isAdmin ? "outline" : "secondary";
 
   return (
     <Button
-      variant="outline"
+      variant={buttonVariant}
       onClick={handleGenerateQuiz}
       disabled={isGenerating || !hasTranscript}
       className="mt-4"
