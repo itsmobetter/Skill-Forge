@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TranscriptViewer } from '@/components/module/transcript-viewer';
+import { GenerateQuizButton } from '@/components/module/generate-quiz-button';
 import QuizResults from '@/components/quiz/quiz-results';
 import QuizModal from '@/components/quiz/quiz-modal';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/use-auth';
 import { Module, Course, Material } from '@shared/schema';
 
 export default function ModuleDetailPage() {
@@ -20,6 +22,7 @@ export default function ModuleDetailPage() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [moduleProgress, setModuleProgress] = useState(0);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Fetch module details
   const { data: module, isLoading: isLoadingModule } = useQuery<Module>({
@@ -270,6 +273,12 @@ export default function ModuleDetailPage() {
             
             <TabsContent value="transcript" className="mt-4">
               <TranscriptViewer moduleId={moduleId || ''} videoUrl={module.videoUrl} />
+              <GenerateQuizButton 
+                moduleId={moduleId || ''} 
+                courseId={courseId} 
+                hasTranscript={!!module.videoUrl} 
+                isAdmin={user?.isAdmin || false}
+              />
             </TabsContent>
             
             {module.hasQuiz && (

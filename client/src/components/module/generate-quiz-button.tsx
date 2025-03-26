@@ -1,0 +1,91 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+
+interface GenerateQuizButtonProps {
+  moduleId: string;
+  courseId: string;
+  hasTranscript: boolean;
+  isAdmin: boolean;
+}
+
+export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin }: GenerateQuizButtonProps) {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
+
+  const generateQuizMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/llm/generate-quiz', {
+        moduleId,
+        courseId
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Quiz Generated Successfully',
+          description: `Created ${data.count} questions for this module.`,
+        });
+        
+        // Invalidate module and quiz queries to refresh the data
+        queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'modules', moduleId] });
+        queryClient.invalidateQueries({ queryKey: [`/api/courses/${courseId}/modules/${moduleId}/quiz`] });
+      } else {
+        toast({
+          title: 'Quiz Generation Failed',
+          description: data.message || 'Failed to generate quiz. Please try again.',
+          variant: 'destructive',
+        });
+      }
+      setIsGenerating(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Quiz Generation Failed',
+        description: error.message || 'An error occurred while generating the quiz.',
+        variant: 'destructive',
+      });
+      setIsGenerating(false);
+    }
+  });
+
+  const handleGenerateQuiz = () => {
+    if (!hasTranscript) {
+      toast({
+        title: 'Transcript Required',
+        description: 'A transcript is required to generate quiz questions. Please add a video with a transcript first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    generateQuizMutation.mutate();
+  };
+
+  if (!isAdmin) {
+    return null;
+  }
+
+  return (
+    <Button
+      variant="outline"
+      onClick={handleGenerateQuiz}
+      disabled={isGenerating || !hasTranscript}
+      className="mt-4"
+    >
+      {isGenerating ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Generating Quiz...
+        </>
+      ) : (
+        'Generate Quiz'
+      )}
+    </Button>
+  );
+}
