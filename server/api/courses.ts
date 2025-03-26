@@ -518,11 +518,14 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       const userId = req.user!.id;
       const courseId = req.params.courseId;
       
+      console.log(`[PROGRESS] Checking progress for User ${userId} in Course ${courseId}`);
       const progress = await storage.getUserCourseProgress(userId, courseId);
       
       if (!progress) {
-        // Return default progress structure if none exists
+        console.log(`[PROGRESS] No enrollment found for User ${userId} in Course ${courseId}`);
+        // Return default progress structure with userEnrolled: false
         return res.json({
+          userEnrolled: false,
           userId,
           courseId,
           currentModuleId: null,
@@ -532,8 +535,14 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         });
       }
       
-      res.json(progress);
+      console.log(`[PROGRESS] Found enrollment for User ${userId} in Course ${courseId}`);
+      // Add userEnrolled: true for actual enrollments
+      res.json({
+        ...progress,
+        userEnrolled: true
+      });
     } catch (error) {
+      console.error(`[PROGRESS] Error fetching progress:`, error);
       res.status(500).json({ message: "Failed to fetch progress" });
     }
   });
@@ -671,7 +680,7 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       
       res.json(profile);
     } catch (error) {
-      console.error(`[PROFILE] Error fetching profile for user ID: ${userId}:`, error);
+      console.error(`[PROFILE] Error fetching profile for user ID: ${req.user!.id}:`, error);
       res.status(500).json({ message: "Failed to fetch profile" });
     }
   });

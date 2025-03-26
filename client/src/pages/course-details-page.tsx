@@ -15,6 +15,11 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Course, Module, Material, UserCourseProgress } from "@shared/schema";
 
+// Extended interface for UserCourseProgress to include the userEnrolled flag
+interface ExtendedUserCourseProgress extends UserCourseProgress {
+  userEnrolled?: boolean;
+}
+
 export default function CourseDetailsPage() {
   const { id } = useParams();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -92,8 +97,8 @@ export default function CourseDetailsPage() {
     queryKey: [`/api/courses/${id}`],
   });
 
-  // Fetch current user progress
-  const { data: userProgress } = useQuery<UserCourseProgress>({
+  // Fetch current user progress with extended interface
+  const { data: userProgress } = useQuery<ExtendedUserCourseProgress>({
     queryKey: [`/api/user/courses/${id}/progress`],
   });
 
@@ -150,8 +155,8 @@ export default function CourseDetailsPage() {
                 <h1 className="text-2xl font-semibold text-slate-900">{course.title}</h1>
               </div>
               <div className="flex space-x-2">
-                {/* Show enrolled button only if user has a course progress record */}
-                {!userProgress || !Object.keys(userProgress).length ? (
+                {/* Show "Enroll Now" button if user hasn't enrolled yet, otherwise show "Enrolled" */}
+                {!userProgress?.userEnrolled ? (
                   <Button 
                     onClick={handleEnrollCourse} 
                     className="flex items-center gap-1"
