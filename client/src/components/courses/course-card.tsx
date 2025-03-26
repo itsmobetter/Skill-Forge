@@ -10,11 +10,13 @@ interface CourseCardProps {
     title: string;
     description: string;
     imageUrl: string;
-    tag?: string;
-    tagColor?: string;
+    tag?: string | null;
+    tagColor?: string | null;
     rating: number;
     reviewCount: number;
     duration: string;
+    deleted?: boolean;
+    deletedAt?: Date | null;
   };
 }
 

@@ -11,8 +11,8 @@ interface CourseProgressProps {
     description: string;
     imageUrl: string;
     progress: number;
-    currentModule: number;
-    totalModules: number;
+    currentModule?: number;
+    totalModules?: number;
   };
 }
 
@@ -44,7 +44,9 @@ export default function CourseProgress({ course }: CourseProgressProps) {
                   </div>
                   <div className="text-right">
                     <span className="text-xs font-semibold inline-block text-slate-600">
-                      Module {course.currentModule}/{course.totalModules}
+                      {course.currentModule && course.totalModules 
+                        ? `Module ${course.currentModule}/${course.totalModules}`
+                        : 'In progress'}
                     </span>
                   </div>
                 </div>
