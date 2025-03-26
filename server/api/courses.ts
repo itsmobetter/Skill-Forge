@@ -184,35 +184,47 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
         return;
       }
       
-      // Check if transcription already exists
-      const existingTranscription = await storage.getModuleTranscription(moduleId);
-      if (existingTranscription && existingTranscription.text && existingTranscription.text.length > 100) {
-        console.log(`[AUTO_TRANSCRIBE] Transcription already exists for module ${moduleId}`);
-        return;
-      } else if (existingTranscription) {
-        console.log(`[AUTO_TRANSCRIBE] Transcription exists but might be incomplete for module ${moduleId}, regenerating...`);
+      // Check if transcription already exists - we use a try-catch here to handle schema mismatches
+      let existingTranscription;
+      try {
+        existingTranscription = await storage.getModuleTranscription(moduleId);
+        
+        if (existingTranscription && existingTranscription.text && existingTranscription.text.length > 100) {
+          console.log(`[AUTO_TRANSCRIBE] Transcription already exists for module ${moduleId}`);
+          return;
+        } else if (existingTranscription) {
+          console.log(`[AUTO_TRANSCRIBE] Transcription exists but might be incomplete for module ${moduleId}, regenerating...`);
+        }
+      } catch (error) {
+        console.log(`[AUTO_TRANSCRIBE] Error checking existing transcription, will create a new one: ${error.message}`);
       }
       
       console.log(`[AUTO_TRANSCRIBE] Triggering transcription API for module ${moduleId}, video ${videoId}`);
       
       // Use the internal API to trigger transcription - this will run asynchronously
-      const response = await fetch('http://localhost:5000/api/llm/transcribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add admin authorization to the request
-          'X-Internal-Request': 'true'
-        },
-        body: JSON.stringify({
-          videoUrl,
-          moduleId,
-          internal: true // Flag to indicate this is an internal request
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[AUTO_TRANSCRIBE] Transcription API returned error: ${response.status} ${errorText}`);
+      try {
+        const response = await fetch('http://localhost:5000/api/llm/transcribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Add admin authorization to the request
+            'X-Internal-Request': 'true'
+          },
+          body: JSON.stringify({
+            videoUrl,
+            moduleId,
+            internal: true // Flag to indicate this is an internal request
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[AUTO_TRANSCRIBE] Transcription API returned error: ${response.status} ${errorText}`);
+        } else {
+          console.log(`[AUTO_TRANSCRIBE] Transcription API request successful for module ${moduleId}`);
+        }
+      } catch (fetchError) {
+        console.error(`[AUTO_TRANSCRIBE] Error calling transcription API: ${fetchError.message}`);
       }
       
       console.log(`[AUTO_TRANSCRIBE] Transcription request sent for module ${moduleId}`);

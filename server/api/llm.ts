@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import { storage } from "../storage";
-import { insertQuizQuestionSchema } from "@shared/schema";
+import { insertQuizQuestionSchema, ModuleTranscription } from "@shared/schema";
 import { z } from "zod";
 import { createGeminiService } from "../gemini";
 import { nanoid } from "nanoid";
@@ -457,20 +457,44 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           // Save or update the transcription in the main database
           const existingTranscription = await storage.getModuleTranscription(moduleId);
 
-          if (existingTranscription) {
-            await storage.updateModuleTranscription(existingTranscription.id, { 
-              text: transcript,
-              timestampedText: segments,
-              vectorId: vectorId || existingTranscription.vectorId
-            });
-          } else {
-            await storage.createModuleTranscription({
-              moduleId,
-              videoId,
-              text: transcript,
-              timestampedText: segments,
-              vectorId
-            });
+          try {
+            if (existingTranscription) {
+              // Create an update object with basic fields first
+              const updateData: Partial<ModuleTranscription> = { 
+                text: transcript,
+                videoId,
+                vectorId: vectorId || existingTranscription.vectorId
+              };
+              
+              // Only add timestampedText if it exists in the database schema
+              try {
+                updateData.timestampedText = segments;
+              } catch (schemaError) {
+                console.log("[TRANSCRIPTION] timestampedText field not available in schema, skipping...");
+              }
+              
+              await storage.updateModuleTranscription(existingTranscription.id, updateData);
+            } else {
+              // Create an insert object with basic fields first
+              const transcriptionData: any = {
+                moduleId,
+                videoId,
+                text: transcript,
+                vectorId
+              };
+              
+              // Only add timestampedText if it exists in the database schema
+              try {
+                transcriptionData.timestampedText = segments;
+              } catch (schemaError) {
+                console.log("[TRANSCRIPTION] timestampedText field not available in schema, skipping...");
+              }
+              
+              await storage.createModuleTranscription(transcriptionData);
+            }
+          } catch (storageError) {
+            console.error("[TRANSCRIPTION] Error saving transcription:", storageError);
+            // We'll still continue to return the transcript even if storage fails
           }
 
           // Update module with the video URL if it's not already set
