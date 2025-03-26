@@ -61,14 +61,13 @@ export default function CourseDetailsPage() {
         title: "Enrolled Successfully",
         description: "You have successfully enrolled in this course.",
       });
+      
       // Force refetch both progress and user courses list
       queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${id}/progress`] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/courses"] });
       
-      // Reload the current page to refresh the UI state
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // No need to reload the page - React Query will automatically update the UI
+      // This provides a smoother user experience
     },
     onError: (error: Error) => {
       console.error("Enrollment error response:", error);

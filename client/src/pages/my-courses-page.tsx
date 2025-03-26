@@ -103,7 +103,7 @@ export default function MyCoursesPage() {
         )}
 
         <div className="mt-4">
-          <Link href={`/course/${course.id}`}>
+          <Link href={`/courses/${course.id}`}>
             <Button className="w-full">
               {course.completed ? "Review Course" : "Continue Learning"}
             </Button>
