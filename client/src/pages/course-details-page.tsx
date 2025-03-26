@@ -268,7 +268,7 @@ export default function CourseDetailsPage() {
                   </div>
                 </div>
                 
-                {materials && <CourseMaterials materials={materials} />}
+                {materials && <CourseMaterials materials={materials as any} />}
               </div>
               
               <div className="lg:w-1/3">
@@ -276,7 +276,7 @@ export default function CourseDetailsPage() {
                 
                 {modules && (
                   <CourseModules 
-                    modules={modules} 
+                    modules={modules as any} 
                     currentModuleOrder={userProgress?.currentModuleOrder || 1}
                     courseId={course.id}
                   />
