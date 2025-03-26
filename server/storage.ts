@@ -167,7 +167,16 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
+    
+    // Ensure all fields have proper types to match the schema
+    const user: User = { 
+      id,
+      username: insertUser.username,
+      password: insertUser.password,
+      email: insertUser.email ?? null,
+      isAdmin: insertUser.isAdmin ?? false
+    };
+    
     this.users.set(id, user);
     return user;
   }
@@ -566,16 +575,24 @@ export class MemStorage implements IStorage {
     let completion = this.moduleCompletions.get(key);
     
     if (completion) {
-      completion = { ...completion, completed };
+      // Update existing completion
+      completion = { 
+        ...completion, 
+        completed,
+        // If completed is now true, update the completedAt timestamp if it wasn't already set
+        completedAt: completed ? (completion.completedAt || new Date()) : null
+      };
     } else {
+      // Create new completion with proper null value (not undefined)
       completion = {
         userId,
         moduleId,
         completed,
-        completedAt: completed ? new Date() : undefined
+        completedAt: completed ? new Date() : null
       };
     }
     
+    console.log(`[MemStorage] ${completion.completed ? 'Completed' : 'Uncompleted'} module ${moduleId} for user ${userId}`);
     this.moduleCompletions.set(key, completion);
     return completion;
   }
@@ -820,23 +837,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
-    console.log(`[DatabaseStorage] Creating new profile for user ID: ${profile.userId}`);
-    
-    // Ensure all fields use null instead of undefined to match the database schema
-    const profileWithNulls = {
-      userId: profile.userId,
-      firstName: profile.firstName ?? null,
-      lastName: profile.lastName ?? null,
-      email: profile.email ?? null,
-      position: profile.position ?? null,
-      department: profile.department ?? null,
-      about: profile.about ?? null,
-      avatarUrl: profile.avatarUrl ?? null
-    };
-    
-    const [userProfile] = await db.insert(schema.userProfiles).values(profileWithNulls).returning();
-    console.log(`[DatabaseStorage] Profile created with ID: ${userProfile.id}`);
-    return userProfile;
+    try {
+      console.log(`[DatabaseStorage] Creating new profile for user ID: ${profile.userId}`);
+      
+      // First check if a profile already exists for this user to avoid duplicates
+      const existingProfile = await this.getUserProfile(profile.userId);
+      if (existingProfile) {
+        console.log(`[DatabaseStorage] Profile already exists for user ID: ${profile.userId}, returning existing profile`);
+        return existingProfile;
+      }
+      
+      // Ensure all fields use null instead of undefined to match the database schema
+      const profileWithNulls = {
+        userId: profile.userId,
+        firstName: profile.firstName ?? null,
+        lastName: profile.lastName ?? null,
+        email: profile.email ?? null,
+        position: profile.position ?? null,
+        department: profile.department ?? null,
+        about: profile.about ?? null,
+        avatarUrl: profile.avatarUrl ?? null
+      };
+      
+      const [userProfile] = await db.insert(schema.userProfiles).values(profileWithNulls).returning();
+      console.log(`[DatabaseStorage] Profile created with ID: ${userProfile.id}`);
+      return userProfile;
+    } catch (error) {
+      console.error(`[DatabaseStorage] Error creating user profile for userId ${profile.userId}:`, error);
+      throw error;
+    }
   }
 
   async updateUserProfile(userId: number, profileUpdate: Partial<UserProfile>): Promise<UserProfile> {
