@@ -72,10 +72,21 @@ export function createGeminiService(config: ApiConfig): GeminiService {
         
         // In a real implementation, we would use a transcription service or YouTube API
         // Here, we'll use Gemini to create a simulated transcript with timestamps
+        let videoTopic = "quality management";
+        
+        // Try to extract topic from video ID to generate more relevant content
+        if (videoId.includes("ISO") || videoId.includes("9001")) {
+          videoTopic = "ISO 9001:2015 standards and quality management systems";
+        } else if (videoId.includes("SPC") || videoId.includes("control")) {
+          videoTopic = "statistical process control and quality control charting";
+        } else if (videoId.includes("capability") || videoId.includes("Cp") || videoId.includes("Cpk")) {
+          videoTopic = "process capability indices (Cp and Cpk) and manufacturing quality";
+        }
+        
         const prompt = `
-          Create a realistic educational transcript for a 10-minute video about quality management, ISO standards, or engineering education.
+          Create a realistic educational transcript for a 10-minute video about ${videoTopic} for engineering professionals.
           
-          The video's YouTube ID is ${videoId}.
+          The video reference is ${videoId}.
           
           Format your response as a detailed transcript with 8-12 segments, each with:
           1. A start time (in seconds, from 0 to 600)
@@ -96,7 +107,8 @@ export function createGeminiService(config: ApiConfig): GeminiService {
             }
           ]
           
-          Make sure the segments flow naturally and cover technical details about quality management.
+          Make sure the segments flow naturally and cover detailed, technical content about ${videoTopic}.
+          Include specific terminology, standards references, and practical examples an engineer would need to know.
           Ensure the timestamps are in strictly ascending order with no gaps or overlaps.
         `;
         

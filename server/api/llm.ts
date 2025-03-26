@@ -327,33 +327,52 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         moduleTitle = module.title;
       }
       
-      // Get content for quiz generation - either from the request body directly or from the module's transcription
+      // Get content for quiz generation - from multiple possible sources
       let quizContent: string;
       
-      // If content is provided directly (for internal automated requests), use that
+      // 1. If content is provided directly in the request body, use that first
       if (content && typeof content === 'string' && content.trim().length > 100) {
         console.log(`[AUTO_QUIZ] Using provided content for quiz generation (${content.length} characters)`);
         quizContent = content;
       } else {
-        // Otherwise, get the module transcription
+        // 2. Try to get the module transcription
         const transcription = await storage.getModuleTranscription(moduleId);
 
-        if (!transcription) {
-          return res.status(404).json({ 
-            message: "No transcription found for this module",
-            details: "This module requires a valid video URL to generate a transcription. Please add a valid YouTube video URL to the module and the system will automatically generate a transcription."
-          });
+        // Check if we have a valid transcription with sufficient content
+        if (transcription && transcription.text && transcription.text.trim().length >= 50) {
+          console.log(`[AUTO_QUIZ] Using existing module transcription (${transcription.text.length} characters)`);
+          quizContent = transcription.text;
+        } else {
+          // 3. If no transcription, generate content based on module and course information
+          console.log(`[AUTO_QUIZ] No valid transcription found, using module/course metadata to generate content`);
+          
+          // Build a rich context from module and course data
+          const moduleDescription = module.description || ""; 
+          const courseDescription = course.description || "";
+          const moduleTags = module.tags ? JSON.stringify(module.tags) : "";
+          const moduleObjectives = module.objectives ? JSON.stringify(module.objectives) : "";
+          
+          // For modules without transcriptions, use metadata and module description to generate quiz content
+          const contextInfo = `
+            Module Title: ${moduleTitle}
+            Module Description: ${moduleDescription}
+            Course Title: ${courseTitle}
+            Course Description: ${courseDescription}
+            Module Tags: ${moduleTags}
+            Module Objectives: ${moduleObjectives}
+          `.trim();
+          
+          // Check if we have enough context data
+          if (contextInfo.length < 100) {
+            console.log(`[AUTO_QUIZ] Warning: Limited context information available for quiz generation`);
+            // Still proceed but with a generic topic based on the module title
+            quizContent = `Generate quality management quiz questions about "${moduleTitle}" in the context of "${courseTitle}". Focus on best practices, standards, and implementation details for quality management systems in engineering contexts. Include questions about measurement, standards compliance, and process improvement.`;
+          } else {
+            quizContent = `Generate quality management quiz questions based on this educational content: ${contextInfo}`;
+          }
+          
+          console.log(`[AUTO_QUIZ] Generated synthetic content for quiz generation (${quizContent.length} characters)`);
         }
-        
-        // Make sure transcription text is not empty or too short
-        if (!transcription.text || transcription.text.trim().length < 50) {
-          return res.status(400).json({ 
-            message: "Transcription text is too short or empty",
-            details: "The module has a transcription record, but the text content is insufficient to generate meaningful quiz questions. Please ensure the video has proper audio content that can be transcribed."
-          });
-        }
-        
-        quizContent = transcription.text;
       }
 
       // Create Gemini client
@@ -561,12 +580,19 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         return res.status(400).json({ message: "Video URL is required" });
       }
 
-      // Get video ID from YouTube URL
+      // Try to get video ID from YouTube URL
       const videoIdMatch = videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-      const videoId = videoIdMatch ? videoIdMatch[1] : null;
-
-      if (!videoId) {
-        return res.status(400).json({ message: "Invalid YouTube URL" });
+      
+      // Use the YouTube ID if available, otherwise use the URL or a reference identifier
+      let videoId;
+      
+      if (videoIdMatch && videoIdMatch[1]) {
+        videoId = videoIdMatch[1];
+        console.log(`[TRANSCRIPTION] Extracted YouTube ID: ${videoId}`);
+      } else {
+        // For non-YouTube videos, create a reference ID from the URL or use a provided moduleId
+        videoId = moduleId || videoUrl.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '_');
+        console.log(`[TRANSCRIPTION] Using reference ID for non-YouTube video: ${videoId}`);
       }
 
       // For a real implementation, we would use the YouTube API or a transcription service
