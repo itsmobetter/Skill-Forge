@@ -62,11 +62,16 @@ export default function CourseDetailsPage() {
         description: "You have successfully enrolled in this course.",
       });
       
-      // Force refetch both progress and user courses list
+      // Invalidate all relevant queries to update UI across the application
+      // This ensures both this page and the dashboard/my-courses pages refresh properly
       queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${id}/progress`] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/courses"] });
+
+      // These are needed to refresh dashboard information
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
       
-      // No need to reload the page - React Query will automatically update the UI
+      // No page reload needed - React Query will automatically update the UI
       // This provides a smoother user experience
     },
     onError: (error: Error) => {
