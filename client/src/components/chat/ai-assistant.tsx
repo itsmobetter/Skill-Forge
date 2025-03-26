@@ -161,14 +161,16 @@ export default function AiAssistant({ courseId, moduleName }: AiAssistantProps) 
   const renderMessageContent = (content: string, isAssistant: boolean) => {
     if (isAssistant) {
       return (
-        <ReactMarkdown
-          className="text-sm prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-slate-700 
-                     prose-h1:text-lg prose-h2:text-base prose-h3:text-base prose-p:my-1.5
-                     prose-a:text-primary-600 prose-code:text-primary-600 prose-code:bg-primary-50 
-                     prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:hidden prose-code:after:hidden"
-        >
-          {content}
-        </ReactMarkdown>
+        <div className="text-sm prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-slate-700 
+                        prose-h1:text-lg prose-h2:text-base prose-h3:text-base prose-p:my-1.5
+                        prose-a:text-primary-600 prose-code:text-primary-600 prose-code:bg-primary-50 
+                        prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:hidden prose-code:after:hidden">
+          <ReactMarkdown components={{
+            // No components need to be specified to avoid the className warning
+          }}>
+            {content}
+          </ReactMarkdown>
+        </div>
       );
     }
     return <p className="text-sm">{content}</p>;
