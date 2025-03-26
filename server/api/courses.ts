@@ -21,16 +21,22 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       
       // Send only the fields that are guaranteed to exist in the database schema
       // This prevents errors when the schema is out of sync
-      const safeTranscription = {
+      const safeTranscription: Record<string, any> = {
         id: transcription.id,
         moduleId: transcription.moduleId,
         videoId: transcription.videoId,
         text: transcription.text,
-        // Only include the timestampedText field if it exists
-        ...(transcription.timestampedText && { timestampedText: transcription.timestampedText }),
-        ...(transcription.vectorId && { vectorId: transcription.vectorId }),
         lastUpdated: transcription.lastUpdated
       };
+      
+      // Only include optional fields if they exist
+      if ('timestampedText' in transcription && transcription['timestampedText']) {
+        safeTranscription.timestampedText = transcription['timestampedText'];
+      }
+      
+      if ('vectorId' in transcription && transcription['vectorId']) {
+        safeTranscription.vectorId = transcription['vectorId'];
+      }
       
       res.json(safeTranscription);
     } catch (error) {
