@@ -39,12 +39,15 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
   });
 
   const handleModuleClick = (module: Module) => {
-    // Only allow clicking on unlocked modules
-    if (module.order <= currentModuleOrder) {
+    // Allow clicking on unlocked or completed modules
+    if (module.order <= currentModuleOrder || module.completed) {
       // If it's not the current module, update the current module
       if (module.order !== currentModuleOrder) {
         updateModuleMutation.mutate({ moduleId: module.id });
       }
+      
+      // Navigate to module details page
+      navigate(`/courses/${courseId}/modules/${module.id}`);
     }
   };
   

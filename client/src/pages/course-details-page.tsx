@@ -280,7 +280,15 @@ export default function CourseDetailsPage() {
           onQuizComplete={(passed) => {
             console.log("Quiz completed, passed:", passed);
             if (passed) {
+              // Just invalidate the queries to refresh data, but don't automatically move to next module
               queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${id}/progress`] });
+              queryClient.invalidateQueries({ queryKey: [`/api/courses/${id}/modules`] });
+              
+              // Add a toast to inform the user they can continue with the course
+              toast({
+                title: "Quiz Completed!",
+                description: "You've passed the quiz. You can now move to the next module or review previous modules.",
+              });
             }
           }}
         />

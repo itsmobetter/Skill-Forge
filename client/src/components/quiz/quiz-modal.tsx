@@ -319,8 +319,13 @@ export default function QuizModal({
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex justify-between">
               <Button onClick={handleClose}>Close</Button>
+              {results.passed && (
+                <div className="text-right">
+                  <p className="text-xs text-slate-500 mb-2">You can continue with the course after reviewing your scores</p>
+                </div>
+              )}
             </DialogFooter>
           </>
         )}
