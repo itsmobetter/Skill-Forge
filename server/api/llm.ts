@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { insertQuizQuestionSchema, ModuleTranscription } from "@shared/schema";
 import { z } from "zod";
 import { createGeminiService } from "../gemini";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { nanoid } from "nanoid";
 
 interface QuizQuestion {
@@ -234,6 +235,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           role: "system",
           content: `You are an expert educational assistant for a learning management system. 
           Your goal is to provide helpful, accurate, and concise answers to questions about the course content.
+          Format your response with Markdown for better readability. Use headers, lists, and emphasis where appropriate.
           Use the context provided to inform your answers, but you can also draw on your general knowledge 
           to provide comprehensive responses. Always be professional and supportive in your tone.`
         },
@@ -243,20 +245,85 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         }
       ];
 
-      // Call Gemini LLM
-      const answer = await gemini.generateChatResponse(messages, context);
+      // Check if streaming is enabled in the API config
+      if (apiConfig.streaming) {
+        // Set appropriate headers for streaming
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        let fullAnswer = '';
+        
+        try {
+          // Use the Google Generative AI SDK to generate content with streaming
+          const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || apiConfig.apiKey);
+          const model = genAI.getGenerativeModel({
+            model: apiConfig.model,
+            generationConfig: {
+              temperature: apiConfig.temperature,
+              maxOutputTokens: apiConfig.maxTokens,
+            },
+          });
+          
+          // Create content with prompt
+          const prompt = `Consider the following context information when answering:
+          
+          ${context}
+          
+          Question: ${question}`;
+          
+          const result = await model.generateContentStream(prompt);
+          
+          // Stream response chunks to client
+          for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            fullAnswer += chunkText;
+            
+            // Send chunk to client
+            res.write(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`);
+            
+            // Force flush to ensure client receives data immediately
+            // Handle different types of response objects that may have flush method
+            if (typeof (res as any).flush === 'function') {
+              (res as any).flush();
+            }
+          }
+          
+          // End the stream
+          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          res.end();
+          
+          // Save the interaction in history after streaming is complete
+          await storage.createChatInteraction({
+            userId,
+            courseId,
+            moduleId: moduleId || null,
+            question,
+            answer: fullAnswer,
+            timestamp: new Date()
+          });
+          
+        } catch (streamError) {
+          console.error("Streaming error:", streamError);
+          res.write(`data: ${JSON.stringify({ error: (streamError as Error).message })}\n\n`);
+          res.end();
+        }
+      } else {
+        // Non-streaming response (original behavior)
+        const answer = await gemini.generateChatResponse(messages, context);
 
-      // Save the interaction in history
-      await storage.createChatInteraction({
-        userId,
-        courseId,
-        moduleId: moduleId || null,
-        question,
-        answer,
-        timestamp: new Date()
-      });
+        // Save the interaction in history
+        await storage.createChatInteraction({
+          userId,
+          courseId,
+          moduleId: moduleId || null,
+          question,
+          answer,
+          timestamp: new Date()
+        });
 
-      res.json({ answer });
+        res.json({ answer });
+      }
     } catch (error) {
       console.error("LLM question error:", error);
       res.status(500).json({ message: "Failed to process question", error: (error as Error).message });
