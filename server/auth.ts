@@ -111,13 +111,13 @@ export function setupAuth(app: Express) {
       // Create default profile for the user
       await storage.createUserProfile({
         userId: user.id,
-        firstName: req.body.firstName || "",
-        lastName: req.body.lastName || "",
-        email: req.body.email || "",
-        position: req.body.position || "",
-        department: req.body.department || "",
-        about: "",
-        avatarUrl: ""
+        firstName: req.body.firstName || null,
+        lastName: req.body.lastName || null,
+        email: req.body.email || null,
+        position: req.body.position || null,
+        department: req.body.department || null,
+        about: null,
+        avatarUrl: null
       });
 
       // Create default API settings

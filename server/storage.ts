@@ -758,8 +758,19 @@ export class DatabaseStorage implements IStorage {
 
   // User profile
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
-    const [profile] = await db.select().from(schema.userProfiles).where(eq(schema.userProfiles.userId, userId));
-    return profile;
+    try {
+      // Use a strict equality check on userId to ensure we only get the profile for the exact user
+      // This prevents potential data leakage between accounts
+      const [profile] = await db.select()
+        .from(schema.userProfiles)
+        .where(eq(schema.userProfiles.userId, userId))
+        .limit(1);
+      
+      return profile;
+    } catch (error) {
+      console.error(`Error fetching user profile for userId ${userId}:`, error);
+      return undefined;
+    }
   }
 
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
@@ -768,17 +779,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserProfile(userId: number, profile: Partial<UserProfile>): Promise<UserProfile> {
-    const [existingProfile] = await db.select().from(schema.userProfiles).where(eq(schema.userProfiles.userId, userId));
-    if (!existingProfile) {
-      throw new Error("Profile not found");
-    }
+    try {
+      // First get the existing profile with a strict equality check on userId
+      const [existingProfile] = await db.select()
+        .from(schema.userProfiles)
+        .where(eq(schema.userProfiles.userId, userId))
+        .limit(1);
+        
+      if (!existingProfile) {
+        throw new Error("Profile not found");
+      }
 
-    const [updatedProfile] = await db.update(schema.userProfiles)
-      .set(profile)
-      .where(eq(schema.userProfiles.userId, userId))
-      .returning();
-    
-    return updatedProfile;
+      // Update only the profile for the exact user
+      const [updatedProfile] = await db.update(schema.userProfiles)
+        .set(profile)
+        .where(eq(schema.userProfiles.userId, userId))
+        .returning();
+      
+      return updatedProfile;
+    } catch (error) {
+      console.error(`Error updating user profile for userId ${userId}:`, error);
+      throw error;
+    }
   }
 
   // API configuration
