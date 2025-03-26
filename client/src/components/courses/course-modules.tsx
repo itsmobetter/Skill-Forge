@@ -1,10 +1,11 @@
-import { useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CheckCircle, Lock, PlayCircle, FileText, ExternalLink } from "lucide-react";
+import { CheckCircle, Lock, PlayCircle, FileText, ExternalLink, Award, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 interface Module {
   id: string;
@@ -25,6 +26,27 @@ interface CourseModulesProps {
 
 export default function CourseModules({ modules, currentModuleOrder, courseId }: CourseModulesProps) {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  
+  // Fetch course data to get the title
+  const { data: course } = useQuery<{
+    id: string;
+    title: string;
+    imageUrl: string;
+  }>({
+    queryKey: [`/api/courses/${courseId}`],
+  });
+  
+  // Fetch user's course progress
+  const { data: userProgress } = useQuery<{
+    id: number;
+    userId: number;
+    courseId: string;
+    progress: number;
+    completed: boolean;
+  }>({
+    queryKey: [`/api/user/courses/${courseId}/progress`],
+  });
   
   // Mutation to update current module
   const updateModuleMutation = useMutation({
@@ -36,6 +58,36 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
       queryClient.invalidateQueries({ queryKey: [`/api/courses/${courseId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${courseId}/progress`] });
     },
+  });
+  
+  // Mutation to generate a certificate
+  const generateCertificateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", '/api/certificates', {
+        userId: userProgress?.userId,
+        courseId,
+        courseName: course?.title || '',
+        issuedDate: new Date(),
+        credentialId: `CERT-${Date.now().toString(36)}`,
+        thumbnailUrl: course?.imageUrl || ''
+      });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Certificate Generated",
+        description: "Your course completion certificate has been created.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/certificates"] });
+      navigate('/certificates');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate certificate.",
+        variant: "destructive"
+      });
+    }
   });
 
   const handleModuleClick = (module: Module) => {
@@ -52,6 +104,23 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
   const navigateToModuleDetails = (moduleId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     navigate(`/courses/${courseId}/modules/${moduleId}`);
+  };
+
+  // Check if all modules are completed
+  const allModulesCompleted = modules.every(module => module.completed);
+  
+  // Function to handle certificate generation
+  const handleCompleteCourse = () => {
+    if (!allModulesCompleted) {
+      toast({
+        title: "Course Not Completed",
+        description: "All modules must be completed before generating a certificate.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    generateCertificateMutation.mutate();
   };
 
   return (
@@ -126,6 +195,29 @@ export default function CourseModules({ modules, currentModuleOrder, courseId }:
           })}
         </div>
       </CardContent>
+      
+      {/* Complete Course button shown only if user is enrolled and has progress */}
+      {userProgress && (
+        <CardFooter className="px-6 py-4 border-t border-slate-200">
+          <Button 
+            className="w-full"
+            disabled={!allModulesCompleted || generateCertificateMutation.isPending}
+            onClick={handleCompleteCourse}
+          >
+            {generateCertificateMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating Certificate...
+              </>
+            ) : (
+              <>
+                <Award className="mr-2 h-4 w-4" />
+                {allModulesCompleted ? "Complete Course & Get Certificate" : "Complete All Modules To Get Certificate"}
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

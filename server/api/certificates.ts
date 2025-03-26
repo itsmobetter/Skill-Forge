@@ -53,14 +53,39 @@ export function setupCertificateRoutes(router: Router, requireAuth: any, require
         return res.status(403).json({ message: "Not authorized to create certificates for other users" });
       }
       
-      // Verify that the user has completed the course
+      // Get user and course info
       const { userId, courseId } = req.body;
       
+      // Get course progress
       const courseProgress = await storage.getUserCourseProgress(userId, courseId);
       
-      // Only allow certificate creation if the course is completed (unless admin)
-      if (!req.user!.isAdmin && (!courseProgress || !courseProgress.completed)) {
-        return res.status(400).json({ message: "Course must be completed to issue a certificate" });
+      // Check if all modules are completed
+      const modules = await storage.getCourseModules(courseId);
+      const completedModules = await storage.getCompletedModules(userId, courseId);
+      
+      // Only admin can bypass these checks
+      if (!req.user!.isAdmin) {
+        // Verify the user actually has course progress
+        if (!courseProgress) {
+          return res.status(400).json({ message: "You must be enrolled in the course to get a certificate" });
+        }
+        
+        // Check if all modules are completed
+        if (modules.length > completedModules.length) {
+          return res.status(400).json({ 
+            message: "Not all modules are completed",
+            completed: completedModules.length,
+            total: modules.length
+          });
+        }
+      }
+      
+      // Mark the course as completed if not already
+      if (courseProgress && !courseProgress.completed) {
+        await storage.updateUserCourseProgress(courseProgress.id, {
+          completed: true,
+          progress: 100
+        });
       }
       
       // Validate and create the certificate
@@ -72,6 +97,7 @@ export function setupCertificateRoutes(router: Router, requireAuth: any, require
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid certificate data", errors: error.errors });
       }
+      console.error("Certificate creation error:", error);
       res.status(500).json({ message: "Failed to create certificate" });
     }
   });
