@@ -1360,32 +1360,42 @@ export class DatabaseStorage implements IStorage {
         
         // Final attempt - use raw SQL with guaranteed minimum fields
         try {
-          return await executeQuery(
-            async () => {
-              const result = await db.execute(
-                sql`SELECT id, module_id as "moduleId", video_id as "videoId", text FROM module_transcriptions WHERE module_id = ${moduleId}`
-              );
-              
-              if (result.length === 0) {
-                return undefined;
-              }
-              
-              // Create a safe transcription object with just the core fields
-              const transcription = result[0] as any;
-              
-              // Add missing fields with null values to match the expected interface
-              return {
-                id: transcription.id,
-                moduleId: transcription.moduleId,
-                videoId: transcription.videoId,
-                text: transcription.text || "",
-                timestampedText: null,
-                vectorId: null,
-                lastUpdated: null
-              } as ModuleTranscription;
-            },
-            `Failed to get module transcription with raw SQL for module ${moduleId}`
-          );
+          try {
+            return await executeQuery(
+              async () => {
+                const result = await db.execute(
+                  sql`SELECT id, module_id as "moduleId", video_id as "videoId", text FROM module_transcriptions WHERE module_id = ${moduleId}`
+                );
+                
+                // Handle empty result cases
+                if (!result || !result.rows || result.rows.length === 0) {
+                  return undefined;
+                }
+                
+                // Create a safe transcription object with just the core fields
+                const transcription = result.rows[0] as any;
+                
+                if (!transcription) {
+                  return undefined;
+                }
+                
+                // Add missing fields with null values to match the expected interface
+                return {
+                  id: transcription.id || 0,
+                  moduleId: transcription.moduleId || moduleId,
+                  videoId: transcription.videoId || "",
+                  text: transcription.text || "",
+                  timestampedText: null,
+                  vectorId: null,
+                  lastUpdated: null
+                } as ModuleTranscription;
+              },
+              `Failed to get module transcription with raw SQL for module ${moduleId}`
+            );
+          } catch (finalError) {
+            console.error(`Raw SQL transcription query failed: ${finalError}`);
+            return undefined;
+          }
         } catch (finalError) {
           console.error(`All attempts to get transcription failed: ${finalError}`);
           return undefined;
