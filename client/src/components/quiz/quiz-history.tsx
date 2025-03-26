@@ -78,9 +78,7 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
     new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
   );
 
-  const getBadgeVariant = (score: number) => {
-    return 'default'; // Using default variant with custom styling below
-  };
+  // Badge styling is done with custom classes instead of variant
   
   const getBadgeStyle = (score: number) => {
     if (score >= 80) return 'bg-green-100 text-green-800'; 
@@ -126,7 +124,7 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
                       <span className="font-medium">{result.score}%</span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getBadgeVariant(result.score)} className={getBadgeStyle(result.score)}>
+                      <Badge variant="default" className={getBadgeStyle(result.score)}>
                         {getPassFailText(result.score)}
                       </Badge>
                     </TableCell>
@@ -169,7 +167,7 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
                       )}
                     </span>
                   </span>
-                  <Badge variant={getBadgeVariant(result.score)} className={getBadgeStyle(result.score)}>
+                  <Badge variant="default" className={getBadgeStyle(result.score)}>
                     {result.score}% ({getPassFailText(result.score)})
                   </Badge>
                 </CardTitle>

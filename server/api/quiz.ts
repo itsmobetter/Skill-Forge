@@ -2,8 +2,40 @@ import { Request, Response, Router } from "express";
 import { storage } from "../storage";
 import { z } from "zod";
 import { insertQuizQuestionSchema, insertQuizResultSchema } from "@shared/schema";
+import { executeQuery } from "../db";
 
 export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: any) {
+  // Debug endpoint to check quiz results structure
+  router.get("/quiz-debug", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Find any quiz results for the current user
+      const userId = req.user!.id;
+      
+      // Use the storage interface rather than direct query
+      const results = await storage.getQuizResults(userId, "any"); // "any" is a placeholder, we'll get all results
+      
+      res.json({
+        message: "Quiz results debug info",
+        userId,
+        resultsCount: results.length,
+        results: results.map(r => ({
+          id: r.id,
+          score: r.score,
+          passed: r.passed,
+          completedAt: r.completedAt,
+          timeSpentSeconds: r.timeSpentSeconds,
+          hasQuestions: r.questions ? r.questions.length : 0,
+          hasAnswers: r.answers ? r.answers.length : 0,
+          // Show a sample of the actual data structure
+          sampleQuestion: r.questions && r.questions.length > 0 ? r.questions[0] : null,
+          sampleAnswer: r.answers && r.answers.length > 0 ? r.answers[0] : null
+        }))
+      });
+    } catch (error) {
+      console.error('Quiz debug error:', error);
+      res.status(500).json({ message: "Failed to fetch quiz debug info", error: (error as Error).message });
+    }
+  });
   // Get quiz questions for a module
   router.get("/courses/:courseId/modules/:moduleId/quiz", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -191,8 +223,15 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       const { moduleId } = req.params;
       
       const results = await storage.getQuizResults(userId, moduleId);
+      
+      // Log the quiz results to check what data is available
+      console.log('Quiz results data:', JSON.stringify(results).substring(0, 200) + '...');
+      
+      // Make sure the results are being returned with the questions and answers data
+      // The PostgreSQL jsonb fields should be parsed automatically by drizzle-orm
       res.json(results);
     } catch (error) {
+      console.error('Error fetching quiz results:', error);
       res.status(500).json({ message: "Failed to fetch quiz results" });
     }
   });
