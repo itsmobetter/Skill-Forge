@@ -34,7 +34,7 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
     try {
       const userId = req.user!.id;
       const { courseId, moduleId } = req.params;
-      const { answers } = req.body;
+      const { answers, timeSpentSeconds } = req.body;
       
       if (!Array.isArray(answers)) {
         return res.status(400).json({ message: "Invalid answers format" });
@@ -76,12 +76,21 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       const score = (correct / total) * 100;
       const passed = score >= 80; // 80% passing threshold (requirement for employee competency assessment)
       
-      // Save the quiz result
+      // Prepare answers data for storage
+      const answersData = answers.map(answer => ({
+        questionId: answer.questionId,
+        selectedOptionId: answer.answerId
+      }));
+      
+      // Save the quiz result with questions, answers, and time spent
       const quizResult = await storage.createQuizResult({
         userId,
         moduleId,
         score,
         passed,
+        timeSpentSeconds: timeSpentSeconds || 0,
+        questions: questions,
+        answers: answersData,
         completedAt: new Date()
       });
       
