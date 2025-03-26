@@ -214,7 +214,10 @@ export const quizResults = pgTable("quiz_results", {
   moduleId: text("module_id").notNull().references(() => modules.id),
   score: integer("score").notNull(),
   passed: boolean("passed").notNull(),
+  timeSpentSeconds: integer("time_spent_seconds").default(0),
   completedAt: timestamp("completed_at").notNull(),
+  answers: jsonb("answers").default([]),
+  questions: jsonb("questions").default([]),
 }, (table) => {
   return {
     userIdIdx: index("quiz_results_user_id_idx").on(table.userId),

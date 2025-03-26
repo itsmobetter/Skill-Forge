@@ -133,7 +133,11 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
                     <TableCell>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Not tracked
+                        {result.timeSpentSeconds ? (
+                          `${Math.floor(result.timeSpentSeconds / 60)}m ${result.timeSpentSeconds % 60}s`
+                        ) : (
+                          "Not tracked"
+                        )}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -157,6 +161,13 @@ export default function QuizHistory({ moduleId, courseId, moduleName }: QuizHist
                 <CardTitle className="text-base flex items-center justify-between">
                   <span>
                     Attempt #{attemptIndex + 1} - {new Date(result.completedAt).toLocaleDateString()}
+                    <span className="block text-xs text-muted-foreground">
+                      Time taken: {result.timeSpentSeconds ? (
+                        `${Math.floor(result.timeSpentSeconds / 60)}m ${result.timeSpentSeconds % 60}s`
+                      ) : (
+                        "Not tracked"
+                      )}
+                    </span>
                   </span>
                   <Badge variant={getBadgeVariant(result.score)} className={getBadgeStyle(result.score)}>
                     {result.score}% ({getPassFailText(result.score)})
