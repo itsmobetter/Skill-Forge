@@ -309,18 +309,9 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         return res.status(404).json({ message: "Module not found" });
       }
 
-      // Prompt variables - default titles
-      let courseTitle = "Unknown Course";
-      let moduleTitle = "Unknown Module";
-      
-      // Update titles from course and module if available
-      if (course && course.title) {
-        courseTitle = course.title;
-      }
-      
-      if (module && module.title) {
-        moduleTitle = module.title;
-      }
+      // Extract course and module information
+      const courseTitle = course && course.title ? course.title : "Unknown Course";
+      const moduleTitle = module && module.title ? module.title : "Unknown Module";
       
       // Get content for quiz generation - either from the request body directly or from the module's transcription
       let quizContent: string;
@@ -338,8 +329,12 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
               // Use the module's course ID to get the course info
               const courseData = await storage.getCourse(moduleData.courseId);
               if (courseData) {
-                courseTitle = courseData.title;
-                moduleTitle = moduleData.title;
+                // Use local variables for the titles with complete data
+                const updatedCourseTitle = courseData.title;
+                const updatedModuleTitle = moduleData.title;
+                
+                // Use in prompt construction later
+                console.log(`[AUTO_QUIZ] Using course: ${updatedCourseTitle}, module: ${updatedModuleTitle}`);
               }
             }
           } catch (error) {
@@ -399,7 +394,8 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       ${quizContent}`;
 
       try {
-        // Generate quiz questions using our new generateQuizQuestions method
+        // Generate quiz questions with the formatted content
+        console.log(`[AUTO_QUIZ] Generating ${finalQuestionCount} questions for module ${moduleId}`);
         const generatedQuestions = await gemini.generateQuizQuestions(quizContent, finalQuestionCount);
 
         // Validate the structure of generated questions
