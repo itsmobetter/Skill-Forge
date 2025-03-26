@@ -207,12 +207,10 @@ export default function ModuleDetailPage() {
                 <BookOpen className="h-4 w-4" />
                 Transcript
               </TabsTrigger>
-              {module.hasQuiz && (
-                <TabsTrigger value="quiz" className="flex items-center gap-2">
-                  <PencilRuler className="h-4 w-4" />
-                  Quiz
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="quiz" className="flex items-center gap-2">
+                <PencilRuler className="h-4 w-4" />
+                Quiz
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="video" className="mt-4">
@@ -281,39 +279,62 @@ export default function ModuleDetailPage() {
               />
             </TabsContent>
             
-            {module.hasQuiz && (
-              <TabsContent value="quiz" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-xl">Module Quiz</CardTitle>
-                    <CardDescription>
-                      Test your knowledge of the concepts covered in this module
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p>
-                        This quiz will test your understanding of the key concepts covered in this module.
-                        You need to score at least 80% to pass.
-                      </p>
-                      
-                      {/* Quiz Results Component */}
-                      <QuizResults moduleId={moduleId || ''} courseId={courseId} moduleName={module.title} />
-                      
-                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-md">
-                        <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                          <PencilRuler className="h-4 w-4" />
-                          Quiz Instructions
-                        </h4>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                          <li>• The quiz consists of multiple-choice questions</li>
-                          <li>• You need to score at least 80% to pass</li>
-                          <li>• You can retake the quiz if you don't pass</li>
-                          <li>• Review the module content before taking the quiz</li>
-                        </ul>
+            <TabsContent value="quiz" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Module Quiz</CardTitle>
+                  <CardDescription>
+                    Test your knowledge of the concepts covered in this module
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {module.hasQuiz ? (
+                      <>
+                        <p>
+                          This quiz will test your understanding of the key concepts covered in this module.
+                          You need to score at least 80% to pass.
+                        </p>
+                        
+                        {/* Quiz Results Component */}
+                        <QuizResults moduleId={moduleId || ''} courseId={courseId} moduleName={module.title} />
+                        
+                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-md">
+                          <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                            <PencilRuler className="h-4 w-4" />
+                            Quiz Instructions
+                          </h4>
+                          <ul className="text-sm text-blue-700 space-y-1">
+                            <li>• The quiz consists of multiple-choice questions</li>
+                            <li>• You need to score at least 80% to pass</li>
+                            <li>• You can retake the quiz if you don't pass</li>
+                            <li>• Review the module content before taking the quiz</li>
+                          </ul>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-6">
+                        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-4">
+                          <h3 className="text-lg font-medium text-yellow-800 mb-2">Quiz Not Available Yet</h3>
+                          <p className="text-yellow-700">
+                            This module doesn't have a quiz yet. {user?.isAdmin && "As an admin, you can generate a quiz from the transcript tab."}
+                          </p>
+                        </div>
+                        
+                        {module.videoUrl ? (
+                          <p className="text-slate-600">
+                            Please watch the video content and review the materials for this module.
+                          </p>
+                        ) : (
+                          <p className="text-slate-600">
+                            This module needs video content before a quiz can be created.
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  </CardContent>
+                    )}
+                  </div>
+                </CardContent>
+                {module.hasQuiz && (
                   <CardFooter>
                     <Button 
                       className="w-full"
@@ -322,9 +343,9 @@ export default function ModuleDetailPage() {
                       Start Quiz
                     </Button>
                   </CardFooter>
-                </Card>
-              </TabsContent>
-            )}
+                )}
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
 

@@ -179,11 +179,31 @@ export default function QuizModal({
           <DialogHeader>
             <DialogTitle>Quiz Unavailable</DialogTitle>
             <DialogDescription>
-              The quiz for this module is not available at the moment. This is likely because the 
-              module does not have a valid video transcription, which is required for quiz generation.
-              Contact an administrator to add appropriate video content to this module.
+              The quiz for this module is not available at the moment. This may be because:
             </DialogDescription>
           </DialogHeader>
+          <div className="py-4 space-y-4">
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start">
+                <span className="bg-red-100 text-red-800 p-1 rounded-full mr-2 flex-shrink-0">•</span>
+                <span>The module does not have a valid video transcription, which is required for quiz generation.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="bg-red-100 text-red-800 p-1 rounded-full mr-2 flex-shrink-0">•</span>
+                <span>The administrator needs to generate quiz questions for this module.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="bg-red-100 text-red-800 p-1 rounded-full mr-2 flex-shrink-0">•</span>
+                <span>There was an error retrieving the quiz questions from the server.</span>
+              </li>
+            </ul>
+            
+            <div className="bg-blue-50 border border-blue-100 rounded-md p-3">
+              <p className="text-blue-800 text-sm">
+                You can proceed with the module by watching the video content and reviewing available materials. Check back later for the quiz.
+              </p>
+            </div>
+          </div>
           <DialogFooter>
             <Button onClick={handleClose}>Close</Button>
           </DialogFooter>
