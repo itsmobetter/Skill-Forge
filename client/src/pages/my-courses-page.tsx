@@ -32,6 +32,10 @@ export default function MyCoursesPage() {
   // Fetch user's enrolled courses
   const { data: courses, isLoading } = useQuery<CourseWithProgress[]>({
     queryKey: ["/api/user/courses"],
+    // Refetch frequently when the window is focused
+    // This ensures the list updates even if cache invalidation didn't work
+    refetchInterval: 2000, 
+    refetchIntervalInBackground: false,
   });
 
   // Filter courses based on search term
@@ -103,7 +107,7 @@ export default function MyCoursesPage() {
         )}
 
         <div className="mt-4">
-          <Link href={`/courses/${course.id}`}>
+          <Link href={`/course/${course.id}`}>
             <Button className="w-full">
               {course.completed ? "Review Course" : "Continue Learning"}
             </Button>

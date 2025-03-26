@@ -27,6 +27,10 @@ export default function DashboardPage() {
   const { data: userCourses, isLoading: isLoadingUserCourses } = useQuery<CourseWithProgress[]>({
     queryKey: ["/api/user/courses"],
     select: (data) => data || [],
+    // Refetch every 2 seconds when the window is focused
+    // This ensures dashboard updates even if cache invalidation didn't work
+    refetchInterval: 2000,
+    refetchIntervalInBackground: false,
   });
   
   // Filter courses based on search query
