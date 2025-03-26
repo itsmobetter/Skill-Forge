@@ -8,9 +8,16 @@ import { Progress } from "@/components/ui/progress";
 // Add the YouTube API types
 declare global {
   interface Window {
-    YT: typeof YT;
+    YT: any; // Using any for YouTube API to avoid TypeScript errors
     onYouTubeIframeAPIReady: () => void;
   }
+}
+
+// Basic types for YouTube player
+interface YouTubePlayer {
+  destroy: () => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
 }
 
 interface VideoPlayerProps {
@@ -28,7 +35,7 @@ export default function VideoPlayer({ videoUrl, courseId, moduleId }: VideoPlaye
   const [videoDuration, setVideoDuration] = useState(0);
   const [watchPercentage, setWatchPercentage] = useState(0);
   const playerContainerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<YT.Player | null>(null);
+  const playerRef = useRef<any>(null);
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   
@@ -61,6 +68,23 @@ export default function VideoPlayer({ videoUrl, courseId, moduleId }: VideoPlaye
       const playerDiv = document.createElement('div');
       playerDiv.id = containerId;
       playerContainerRef.current.appendChild(playerDiv);
+      
+      // Add styles directly via Javascript
+      const styleElement = document.createElement('style');
+      styleElement.textContent = `
+        #youtube-player-${moduleId} {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+        iframe {
+          width: 100%;
+          height: 100%;
+        }
+      `;
+      document.head.appendChild(styleElement);
     }
 
     // Function to initialize the YouTube player
@@ -87,11 +111,11 @@ export default function VideoPlayer({ videoUrl, courseId, moduleId }: VideoPlaye
             enablejsapi: 1,
           },
           events: {
-            onReady: (event) => {
+            onReady: (event: any) => {
               setIsLoading(false);
               setVideoDuration(event.target.getDuration());
             },
-            onStateChange: (event) => {
+            onStateChange: (event: any) => {
               // State 1 is playing
               if (event.data === window.YT.PlayerState.PLAYING) {
                 if (!videoStarted) {
@@ -231,20 +255,7 @@ export default function VideoPlayer({ videoUrl, courseId, moduleId }: VideoPlaye
           </div>
         )}
         
-        {/* Style the iframe created by YouTube API */}
-        <style jsx>{`
-          #youtube-player-${moduleId} {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-          }
-          iframe {
-            width: 100%;
-            height: 100%;
-          }
-        `}</style>
+        {/* Style is moved to useEffect */}
       </div>
       
       {/* Video progress indicator */}
