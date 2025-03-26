@@ -1322,179 +1322,122 @@ export class DatabaseStorage implements IStorage {
   // Transcriptions
   async getModuleTranscription(moduleId: string): Promise<ModuleTranscription | undefined> {
     try {
-      // First attempt - try selecting all fields (this might fail if schema doesn't match)
+      // Use raw SQL to avoid schema mismatches
       return await executeQuery(
         async () => {
-          const [transcription] = await db.select().from(schema.moduleTranscriptions)
-            .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
+          const result = await db.execute(
+            sql`SELECT id, module_id as "moduleId", video_id as "videoId", text FROM module_transcriptions WHERE module_id = ${moduleId}`
+          );
           
-          return transcription;
+          if (!result || !result.rows || result.rows.length === 0) {
+            return undefined;
+          }
+          
+          const transcription = result.rows[0] as any;
+          
+          if (!transcription) {
+            return undefined;
+          }
+          
+          return {
+            id: transcription.id || 0,
+            moduleId: transcription.moduleId || moduleId,
+            videoId: transcription.videoId || "",
+            text: transcription.text || ""
+          };
         },
         `Failed to get module transcription for module ${moduleId}`
       );
     } catch (error) {
-      console.log(`Error with full transcription query, trying with specific fields: ${error}`);
-      
-      try {
-        // Second attempt - select only specific fields that are guaranteed to exist
-        return await executeQuery(
-          async () => {
-            const [transcription] = await db.select({
-              id: schema.moduleTranscriptions.id,
-              moduleId: schema.moduleTranscriptions.moduleId,
-              videoId: schema.moduleTranscriptions.videoId,
-              text: schema.moduleTranscriptions.text,
-              // Excluding potentially problematic fields:
-              // - timestampedText
-              // - vectorId
-              lastUpdated: schema.moduleTranscriptions.lastUpdated
-            }).from(schema.moduleTranscriptions)
-              .where(eq(schema.moduleTranscriptions.moduleId, moduleId));
-            
-            return transcription;
-          },
-          `Failed to get module transcription with limited fields for module ${moduleId}`
-        );
-      } catch (secondError) {
-        console.log(`Error with limited fields transcription query, trying with raw SQL: ${secondError}`);
-        
-        // Final attempt - use raw SQL with guaranteed minimum fields
-        try {
-          try {
-            return await executeQuery(
-              async () => {
-                const result = await db.execute(
-                  sql`SELECT id, module_id as "moduleId", video_id as "videoId", text FROM module_transcriptions WHERE module_id = ${moduleId}`
-                );
-                
-                // Handle empty result cases
-                if (!result || !result.rows || result.rows.length === 0) {
-                  return undefined;
-                }
-                
-                // Create a safe transcription object with just the core fields
-                const transcription = result.rows[0] as any;
-                
-                if (!transcription) {
-                  return undefined;
-                }
-                
-                // Add missing fields with null values to match the expected interface
-                return {
-                  id: transcription.id || 0,
-                  moduleId: transcription.moduleId || moduleId,
-                  videoId: transcription.videoId || "",
-                  text: transcription.text || "",
-                  timestampedText: null,
-                  vectorId: null,
-                  lastUpdated: null
-                } as ModuleTranscription;
-              },
-              `Failed to get module transcription with raw SQL for module ${moduleId}`
-            );
-          } catch (finalError) {
-            console.error(`Raw SQL transcription query failed: ${finalError}`);
-            return undefined;
-          }
-        } catch (finalError) {
-          console.error(`All attempts to get transcription failed: ${finalError}`);
-          return undefined;
-        }
-      }
+      console.error(`Failed to get transcription for module ${moduleId}:`, error);
+      return undefined;
     }
   }
 
   async createModuleTranscription(transcription: InsertModuleTranscription): Promise<ModuleTranscription> {
     try {
-      // First try the standard insert with all fields
+      // Use raw SQL to avoid schema mismatches
       return await executeQuery(
         async () => {
-          const [newTranscription] = await db.insert(schema.moduleTranscriptions)
-            .values(transcription)
-            .returning();
+          // Use raw SQL insert to ensure compatibility
+          const result = await db.execute(
+            sql`
+              INSERT INTO module_transcriptions 
+                (module_id, video_id, text)
+              VALUES 
+                (${transcription.moduleId}, ${transcription.videoId}, ${transcription.text})
+              RETURNING id, module_id as "moduleId", video_id as "videoId", text
+            `
+          );
           
-          return newTranscription;
+          if (!result || !result.rows || result.rows.length === 0) {
+            throw new Error("Failed to create transcription");
+          }
+          
+          return result.rows[0] as ModuleTranscription;
         },
         `Failed to create module transcription for module ${transcription.moduleId}`
       );
     } catch (error) {
-      console.log(`Error with full transcription insert, trying with limited fields: ${error}`);
-      
-      // If that fails, try inserting only the essential fields
-      return await executeQuery(
-        async () => {
-          // Create a safe subset of fields that should exist in any schema version
-          const safeData = {
-            moduleId: transcription.moduleId,
-            videoId: transcription.videoId,
-            text: transcription.text
-          };
-          
-          const [newTranscription] = await db.insert(schema.moduleTranscriptions)
-            .values(safeData)
-            .returning();
-          
-          return newTranscription;
-        },
-        `Failed to create module transcription with limited fields for module ${transcription.moduleId}`
-      );
+      console.error(`Failed to create transcription for module ${transcription.moduleId}:`, error);
+      throw error;
     }
   }
 
   async updateModuleTranscription(id: number, transcriptionUpdate: Partial<ModuleTranscription>): Promise<ModuleTranscription> {
     try {
-      // First attempt - try to update all provided fields
+      // Only include basic fields that are guaranteed to exist in any schema version
+      const safeUpdate: any = {};
+      
+      if (transcriptionUpdate.text !== undefined) {
+        safeUpdate.text = transcriptionUpdate.text;
+      }
+      
+      if (transcriptionUpdate.videoId !== undefined) {
+        safeUpdate.video_id = transcriptionUpdate.videoId;
+      }
+      
+      // Use raw SQL to update to avoid schema mismatches
       return await executeQuery(
         async () => {
-          const [existingTranscription] = await db.select().from(schema.moduleTranscriptions)
-            .where(eq(schema.moduleTranscriptions.id, id));
-            
-          if (!existingTranscription) {
+          // First check if the transcription exists
+          const checkResult = await db.execute(
+            sql`SELECT id FROM module_transcriptions WHERE id = ${id}`
+          );
+          
+          if (!checkResult || !checkResult.rows || checkResult.rows.length === 0) {
             throw new Error("Transcription not found");
           }
-
-          const [updatedTranscription] = await db.update(schema.moduleTranscriptions)
-            .set(transcriptionUpdate)
-            .where(eq(schema.moduleTranscriptions.id, id))
-            .returning();
           
-          return updatedTranscription;
+          // Update using raw SQL
+          const updateQuery = sql`
+            UPDATE module_transcriptions 
+            SET ${Object.keys(safeUpdate).length > 0 ? 
+              sql.join(
+                Object.entries(safeUpdate).map(
+                  ([key, value]) => sql`${sql.identifier(key)} = ${value}`
+                ),
+                sql`, `
+              ) : 
+              sql`text = text`
+            }
+            WHERE id = ${id}
+            RETURNING id, module_id as "moduleId", video_id as "videoId", text
+          `;
+          
+          const result = await db.execute(updateQuery);
+          
+          if (!result || !result.rows || result.rows.length === 0) {
+            throw new Error("Failed to update transcription");
+          }
+          
+          return result.rows[0] as ModuleTranscription;
         },
         `Failed to update module transcription with id ${id}`
       );
     } catch (error) {
-      console.log(`Error with full transcription update, trying with limited fields: ${error}`);
-      
-      // If that fails, update only essential fields
-      return await executeQuery(
-        async () => {
-          const [existingTranscription] = await db.select().from(schema.moduleTranscriptions)
-            .where(eq(schema.moduleTranscriptions.id, id));
-            
-          if (!existingTranscription) {
-            throw new Error("Transcription not found");
-          }
-          
-          // Only include basic fields that are guaranteed to exist in any schema version
-          const safeUpdate: any = {};
-          
-          if (transcriptionUpdate.text !== undefined) {
-            safeUpdate.text = transcriptionUpdate.text;
-          }
-          
-          if (transcriptionUpdate.videoId !== undefined) {
-            safeUpdate.videoId = transcriptionUpdate.videoId;
-          }
-          
-          const [updatedTranscription] = await db.update(schema.moduleTranscriptions)
-            .set(safeUpdate)
-            .where(eq(schema.moduleTranscriptions.id, id))
-            .returning();
-          
-          return updatedTranscription;
-        },
-        `Failed to update module transcription with limited fields for id ${id}`
-      );
+      console.error(`Failed to update transcription with id ${id}:`, error);
+      throw error;
     }
   }
 

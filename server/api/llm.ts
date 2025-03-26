@@ -613,39 +613,26 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
 
           try {
             if (existingTranscription) {
-              // Create an update object with basic fields first
-              // Use a plain object to avoid TypeScript errors with timestampedText field
+              // Create an update object with basic fields only
               const updateData: any = { 
                 text: transcript,
-                videoId,
-                vectorId: vectorId || existingTranscription.vectorId
+                videoId
               };
               
-              // If segments exist, try to add them to the update
-              if (segments && segments.length > 0) {
-                console.log(`[TRANSCRIPTION] Adding ${segments.length} timestamped segments`);
-                // We'll try to add this field, but it might not exist in the database schema
-                // Let the database driver handle any errors during update
-                updateData.timestampedText = segments;
-              }
+              // We'll store the segments in vector database only, not in the main database
+              console.log(`[TRANSCRIPTION] Adding ${segments ? segments.length : 0} timestamped segments to vector DB only`);
               
               await storage.updateModuleTranscription(existingTranscription.id, updateData);
             } else {
-              // Create an insert object with basic fields first
+              // Create an insert object with only the basic fields that match our schema
               const transcriptionData: any = {
                 moduleId,
                 videoId,
-                text: transcript,
-                vectorId
+                text: transcript
               };
               
-              // If segments exist, try to add them to the insert data
-              if (segments && segments.length > 0) {
-                console.log(`[TRANSCRIPTION] Adding ${segments.length} timestamped segments to new transcription`);
-                // We'll try to add this field, but it might not exist in the database schema
-                // Let the database driver handle any errors during insert
-                transcriptionData.timestampedText = segments;
-              }
+              // We'll store the segments in vector database only, not in the main database
+              console.log(`[TRANSCRIPTION] Adding ${segments ? segments.length : 0} timestamped segments to vector DB only`);
               
               await storage.createModuleTranscription(transcriptionData);
             }
