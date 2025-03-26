@@ -173,7 +173,7 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
     }
     
     try {
-      console.log(`[AUTO_TRANSCRIBE] Starting automatic transcription for module ${moduleId}`);
+      console.log(`[AUTO_TRANSCRIBE] Starting automatic transcription for module ${moduleId} with URL ${videoUrl}`);
       
       // Get video ID from YouTube URL
       const videoIdMatch = videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -186,15 +186,17 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
       
       // Check if transcription already exists
       const existingTranscription = await storage.getModuleTranscription(moduleId);
-      if (existingTranscription) {
+      if (existingTranscription && existingTranscription.text && existingTranscription.text.length > 100) {
         console.log(`[AUTO_TRANSCRIBE] Transcription already exists for module ${moduleId}`);
         return;
+      } else if (existingTranscription) {
+        console.log(`[AUTO_TRANSCRIBE] Transcription exists but might be incomplete for module ${moduleId}, regenerating...`);
       }
       
       console.log(`[AUTO_TRANSCRIBE] Triggering transcription API for module ${moduleId}, video ${videoId}`);
       
       // Use the internal API to trigger transcription - this will run asynchronously
-      await fetch('http://localhost:5000/api/llm/transcribe', {
+      const response = await fetch('http://localhost:5000/api/llm/transcribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -207,6 +209,11 @@ export function setupCoursesRoutes(router: Router, requireAuth: any, requireAdmi
           internal: true // Flag to indicate this is an internal request
         })
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[AUTO_TRANSCRIBE] Transcription API returned error: ${response.status} ${errorText}`);
+      }
       
       console.log(`[AUTO_TRANSCRIBE] Transcription request sent for module ${moduleId}`);
     } catch (error) {

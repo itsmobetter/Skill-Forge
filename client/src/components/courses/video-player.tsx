@@ -218,7 +218,7 @@ export default function VideoPlayer({ videoUrl, courseId, moduleId }: VideoPlaye
 
   return (
     <div className="flex flex-col">
-      <div ref={playerContainerRef} className="relative pb-[56.25%] bg-black">
+      <div ref={playerContainerRef} className="relative pb-[56.25%] bg-black w-full">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
             <Loader2 className="h-8 w-8 animate-spin text-white" />
@@ -230,6 +230,21 @@ export default function VideoPlayer({ videoUrl, courseId, moduleId }: VideoPlaye
             <p>{error}</p>
           </div>
         )}
+        
+        {/* Style the iframe created by YouTube API */}
+        <style jsx>{`
+          #youtube-player-${moduleId} {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+          }
+          iframe {
+            width: 100%;
+            height: 100%;
+          }
+        `}</style>
       </div>
       
       {/* Video progress indicator */}
