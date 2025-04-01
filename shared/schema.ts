@@ -138,6 +138,7 @@ export const materials = pgTable("materials", {
   type: text("type").notNull(),
   url: text("url").notNull(),
   fileSize: text("file_size").notNull(),
+  sopId: text("sop_id").references(() => standardOperatingProcedures.id),
 });
 
 export const insertMaterialSchema = createInsertSchema(materials).omit({
@@ -309,7 +310,9 @@ export type Module = typeof modules.$inferSelect;
 export type InsertModule = z.infer<typeof insertModuleSchema>;
 
 export type Material = typeof materials.$inferSelect;
-export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+export type InsertMaterial = z.infer<typeof insertMaterialSchema> & {
+  sopId?: string | null;
+};
 
 export type UserCourseProgress = typeof userCourseProgress.$inferSelect;
 export type InsertUserCourseProgress = z.infer<typeof insertCourseProgressSchema>;

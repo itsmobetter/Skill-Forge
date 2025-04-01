@@ -7,13 +7,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TranscriptViewer } from '@/components/module/transcript-viewer';
 import { GenerateQuizButton } from '@/components/module/generate-quiz-button';
+import { MaterialSOPViewer } from '@/components/module/material-sop-viewer';
 import QuizResults from '@/components/quiz/quiz-results';
 import QuizHistory from '@/components/quiz/quiz-history';
 import QuizModal from '@/components/quiz/quiz-modal';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
-import { Module, Course, Material } from '@shared/schema';
+import { Module, Course, Material, SOP } from '@shared/schema';
 
 export default function ModuleDetailPage() {
   const [_, params] = useRoute('/courses/:courseId/modules/:moduleId');
@@ -265,20 +266,38 @@ export default function ModuleDetailPage() {
                   {moduleMaterials.map((material) => (
                     <Card key={material.id}>
                       <CardHeader>
-                        <CardTitle>{material.title}</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                          {material.sopId ? (
+                            <File className="h-5 w-5 text-primary" />
+                          ) : (
+                            <File className="h-5 w-5" />
+                          )}
+                          {material.title}
+                          {material.sopId && (
+                            <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
+                              SOP
+                            </span>
+                          )}
+                        </CardTitle>
                         {material.description && (
                           <CardDescription>{material.description}</CardDescription>
                         )}
                       </CardHeader>
-                      <CardFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => window.open(material.url, '_blank')}
-                          className="w-full sm:w-auto"
-                        >
-                          View Material
-                        </Button>
-                      </CardFooter>
+                      {material.sopId ? (
+                        <CardContent className="pt-0">
+                          <MaterialSOPViewer sopId={material.sopId} />
+                        </CardContent>
+                      ) : (
+                        <CardFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => window.open(material.url, '_blank')}
+                            className="w-full sm:w-auto"
+                          >
+                            View Material
+                          </Button>
+                        </CardFooter>
+                      )}
                     </Card>
                   ))}
                 </div>
