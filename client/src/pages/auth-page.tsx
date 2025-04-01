@@ -12,7 +12,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertUserSchema } from "@shared/schema";
-import { Loader2 } from "lucide-react";
+import { 
+  Brain, 
+  Loader2, 
+  Bot, 
+  Factory, 
+  Cog, 
+  Settings, 
+  LineChart, 
+  ShieldCheck, 
+  BarChart4, 
+  Cpu, 
+  ChevronRight 
+} from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username or email is required"),
@@ -30,6 +42,26 @@ const registerSchema = insertUserSchema.extend({
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
+
+// Animation component to simulate AI-generated nodes
+const AnimatedNodes = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="absolute top-[10%] left-[20%] w-12 h-12 bg-primary/10 rounded-full animate-pulse"></div>
+      <div className="absolute top-[20%] left-[60%] w-8 h-8 bg-primary/20 rounded-full animate-pulse [animation-delay:1s]"></div>
+      <div className="absolute top-[30%] left-[30%] w-10 h-10 bg-primary/15 rounded-full animate-pulse [animation-delay:2s]"></div>
+      <div className="absolute top-[50%] left-[70%] w-14 h-14 bg-primary/20 rounded-full animate-pulse [animation-delay:0.5s]"></div>
+      <div className="absolute top-[70%] left-[40%] w-16 h-16 bg-primary/10 rounded-full animate-pulse [animation-delay:1.5s]"></div>
+      <div className="absolute top-[80%] left-[80%] w-6 h-6 bg-primary/25 rounded-full animate-pulse [animation-delay:0.7s]"></div>
+      
+      {/* Connection lines */}
+      <div className="absolute top-[15%] left-[25%] w-[30%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform rotate-12"></div>
+      <div className="absolute top-[35%] left-[35%] w-[25%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform -rotate-6"></div>
+      <div className="absolute top-[55%] left-[40%] w-[35%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform rotate-12"></div>
+      <div className="absolute top-[75%] left-[50%] w-[30%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform -rotate-6"></div>
+    </div>
+  );
+};
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -73,59 +105,101 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-primary-600 to-secondary-600 p-4">
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-        <div className="hidden md:flex flex-col text-white p-8">
-          <h1 className="text-4xl font-bold mb-4">Skill Forge LMS</h1>
-          <p className="text-xl opacity-90 mb-8">Learning Management System for Engineering Excellence</p>
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="bg-white/20 p-2 rounded-full mr-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                </svg>
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
+      {/* Background with manufacturing theme */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-primary/30 z-0"></div>
+      
+      {/* Circuit board pattern overlay */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNDB2NDBoLTQweiIvPjxwYXRoIGQ9Ik0xNSAyNWgxMHYxaC0xMHpNMTUgMTVoMTB2MWgtMTB6TTI1IDE1djEwaDFWMTV6TTE1IDE1djEwaDF2LTEweiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvZz48L3N2Zz4=')] opacity-10 z-0"></div>
+      
+      {/* Animated neural network nodes */}
+      <AnimatedNodes />
+
+      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-5 gap-8 items-center p-4 z-10">
+        <div className="hidden md:flex md:col-span-3 flex-col text-white p-8 relative">
+          {/* Blob decoration */}
+          <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 -right-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+          
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-6">
+              <Brain className="h-8 w-8 text-primary animate-pulse" />
+              <h1 className="text-4xl font-extrabold">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">LearningPro</span>
+              </h1>
+            </div>
+            
+            <h2 className="text-4xl font-bold tracking-tight mb-4">
+              AI-Powered Manufacturing <br />Excellence Platform
+            </h2>
+            <p className="text-xl text-slate-300 mb-10 max-w-xl">
+              Intelligent training solutions for manufacturing professionals with integrated SOPs, quality control metrics, and AI-enhanced learning.
+            </p>
+            
+            <div className="grid grid-cols-2 gap-6">
+              <div className="bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-white/10 hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-primary/20 p-3 rounded-lg">
+                    <Factory className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">Smart Manufacturing</h3>
+                </div>
+                <p className="text-slate-300">AI-driven quality control and statistical process optimization training modules.</p>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold">Interactive Learning</h3>
-                <p className="text-white/70">Engage with video courses, PDF resources, and interactive quizzes</p>
+              
+              <div className="bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-white/10 hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-primary/20 p-3 rounded-lg">
+                    <Bot className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">AI Assistant</h3>
+                </div>
+                <p className="text-slate-300">Contextual AI support for complex manufacturing procedures and technical questions.</p>
+              </div>
+              
+              <div className="bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-white/10 hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-primary/20 p-3 rounded-lg">
+                    <LineChart className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">Predictive Analytics</h3>
+                </div>
+                <p className="text-slate-300">Learn how to implement predictive maintenance systems using machine learning models.</p>
+              </div>
+              
+              <div className="bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-white/10 hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-primary/20 p-3 rounded-lg">
+                    <Cpu className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold">Digital Twin</h3>
+                </div>
+                <p className="text-slate-300">Training on implementing digital twin technology for real-time process monitoring.</p>
               </div>
             </div>
-            <div className="flex items-start">
-              <div className="bg-white/20 p-2 rounded-full mr-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">AI-Powered Assistant</h3>
-                <p className="text-white/70">Get answers to your questions with our intelligent chatbot</p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="bg-white/20 p-2 rounded-full mr-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Track Progress</h3>
-                <p className="text-white/70">Monitor your learning journey with detailed progress tracking</p>
-              </div>
+            
+            <div className="mt-10 flex items-center gap-2 text-sm text-slate-400">
+              <ShieldCheck className="h-4 w-4" />
+              <span>Trusted by leading manufacturing companies worldwide</span>
             </div>
           </div>
         </div>
 
-        <Card className="w-full shadow-xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Skill Forge</CardTitle>
-            <CardDescription className="text-center">Enter your credentials to access your account</CardDescription>
+        <Card className="w-full md:col-span-2 shadow-2xl bg-white/10 backdrop-blur-sm border-white/20">
+          <CardHeader className="space-y-1 pb-4">
+            <div className="flex justify-center mb-2 md:hidden">
+              <Brain className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-center text-white">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">LearningPro</span>
+            </CardTitle>
+            <CardDescription className="text-center text-slate-300">Access your AI-powered manufacturing training</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/10">
+                <TabsTrigger value="login" className="data-[state=active]:bg-primary text-white">Login</TabsTrigger>
+                <TabsTrigger value="register" className="data-[state=active]:bg-primary text-white">Register</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
@@ -136,11 +210,14 @@ export default function AuthPage() {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username or Email</FormLabel>
+                          <FormLabel className="text-slate-200">Username or Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your username or email" {...field} />
+                            <Input placeholder="Enter your username or email" 
+                              className="border-white/20 bg-white/10 text-white placeholder:text-slate-400" 
+                              {...field} 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -149,29 +226,32 @@ export default function AuthPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel className="text-slate-200">Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input type="password" placeholder="••••••••" 
+                              className="border-white/20 bg-white/10 text-white placeholder:text-slate-400" 
+                              {...field} 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Checkbox id="remember-me" />
-                        <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
+                        <Checkbox id="remember-me" className="border-white/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                        <Label htmlFor="remember-me" className="text-sm text-slate-300">Remember me</Label>
                       </div>
-                      <Button variant="link" className="p-0 text-sm text-primary-600">Forgot password?</Button>
+                      <Button variant="link" className="p-0 text-sm text-primary">Forgot password?</Button>
                     </div>
-                    <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                    <Button type="submit" className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600" disabled={loginMutation.isPending}>
                       {loginMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Signing In...
                         </>
                       ) : (
-                        "Sign In"
+                        <span className="flex items-center">Sign In <ChevronRight className="ml-2 h-4 w-4" /></span>
                       )}
                     </Button>
                   </form>
@@ -186,11 +266,14 @@ export default function AuthPage() {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username</FormLabel>
+                          <FormLabel className="text-slate-200">Username</FormLabel>
                           <FormControl>
-                            <Input placeholder="Choose a username" {...field} />
+                            <Input placeholder="Choose a username" 
+                              className="border-white/20 bg-white/10 text-white placeholder:text-slate-400" 
+                              {...field} 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -199,11 +282,14 @@ export default function AuthPage() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel className="text-slate-200">Email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="Enter your email" {...field} />
+                            <Input type="email" placeholder="Enter your email" 
+                              className="border-white/20 bg-white/10 text-white placeholder:text-slate-400" 
+                              {...field} 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -212,11 +298,14 @@ export default function AuthPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel className="text-slate-200">Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input type="password" placeholder="••••••••" 
+                              className="border-white/20 bg-white/10 text-white placeholder:text-slate-400" 
+                              {...field} 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -225,22 +314,25 @@ export default function AuthPage() {
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
+                          <FormLabel className="text-slate-200">Confirm Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input type="password" placeholder="••••••••" 
+                              className="border-white/20 bg-white/10 text-white placeholder:text-slate-400" 
+                              {...field} 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                    <Button type="submit" className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600" disabled={registerMutation.isPending}>
                       {registerMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Creating Account...
                         </>
                       ) : (
-                        "Create Account"
+                        <span className="flex items-center">Create Account <ChevronRight className="ml-2 h-4 w-4" /></span>
                       )}
                     </Button>
                   </form>
@@ -248,20 +340,20 @@ export default function AuthPage() {
               </TabsContent>
             </Tabs>
           </CardContent>
-          <CardFooter className="flex flex-col">
+          <CardFooter className="flex flex-col pt-0">
             <div className="relative w-full mb-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-300"></div>
+                <div className="w-full border-t border-white/10"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-slate-500">
-                  {activeTab === 'login' ? 'New to Skill Forge?' : 'Already have an account?'}
+                <span className="px-2 backdrop-blur-sm bg-white/5 text-slate-300">
+                  {activeTab === 'login' ? 'New to LearningPro?' : 'Already have an account?'}
                 </span>
               </div>
             </div>
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full border-white/20 text-white hover:bg-white/10 hover:text-white"
               onClick={() => setActiveTab(activeTab === 'login' ? 'register' : 'login')}
             >
               {activeTab === 'login' ? 'Create an account' : 'Sign in instead'}
