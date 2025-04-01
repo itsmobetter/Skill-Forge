@@ -21,41 +21,82 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
       const timestamp = new Date().getTime();
       const uniqueId = Math.random().toString(36).substring(2, 15) + '-' + timestamp;
       
-      console.log(`[QUIZ GEN ${timestamp}] Starting quiz generation for module ${moduleId}`);
-      console.log(`[QUIZ GEN ${timestamp}] Using unique request ID: ${uniqueId}`);
+      // Create a helper function to log with consistent format
+      const logMsg = (msg) => console.log(`[QUIZ GEN ${timestamp}] ${msg}`);
       
-      // First make a direct call to clear existing questions via the quiz API
+      logMsg(`Starting quiz generation for module ${moduleId}`);
+      logMsg(`Using unique request ID: ${uniqueId}`);
+      
+      // STEP 1: First try the dedicated regeneration endpoint
       try {
-        console.log(`[QUIZ GEN ${timestamp}] First attempting to clear existing questions via direct API call`);
-        const clearRes = await apiRequest('POST', `/api/courses/${courseId}/modules/${moduleId}/quiz/regenerate`, {
-          timestamp,
-          requestId: uniqueId
+        logMsg('STEP 1: Using dedicated regeneration endpoint');
+        const regenerateUrl = `/api/courses/${courseId}/modules/${moduleId}/quiz/regenerate`;
+        
+        // Add cache-busting query parameter
+        const finalUrl = `${regenerateUrl}?t=${timestamp}&r=${Math.random()}`;
+        logMsg(`Calling ${finalUrl}`);
+        
+        const regenerateRes = await fetch(finalUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            timestamp,
+            requestId: uniqueId,
+            force: true
+          })
         });
         
-        if (clearRes.ok) {
-          console.log(`[QUIZ GEN ${timestamp}] Successfully triggered regeneration via quiz API`);
+        if (regenerateRes.ok) {
+          logMsg('Successfully regenerated quiz via dedicated endpoint');
+          const result = await regenerateRes.json();
+          return result;
         } else {
-          console.error(`[QUIZ GEN ${timestamp}] Failed to trigger regeneration: ${await clearRes.text()}`);
+          const errorText = await regenerateRes.text();
+          logMsg(`Regeneration failed: ${regenerateRes.status} - ${errorText}`);
+          // Continue to fallback approach
         }
-      } catch (clearError) {
-        console.error(`[QUIZ GEN ${timestamp}] Error clearing questions:`, clearError);
+      } catch (regenerateError) {
+        logMsg(`Error with regeneration endpoint: ${regenerateError.message}`);
+        // Continue to fallback approach
       }
       
-      // Now generate new questions
-      console.log(`[QUIZ GEN ${timestamp}] Generating new quiz questions for module ${moduleId}`);
-      const res = await apiRequest('POST', '/api/llm/generate-quiz', {
-        moduleId,
-        courseId,
-        forceRegenerate: true,
-        archiveOld: true,
-        timestamp,
-        requestId: uniqueId,
-        clearExisting: true,
-        bypassCache: Math.random() // Add random value to prevent any caching
-      });
-      
-      console.log(`[QUIZ GEN ${timestamp}] Request completed with status: ${res.status}`);
-      return res.json();
+      // STEP 2: Fallback to direct LLM generation
+      logMsg('STEP 2: Falling back to direct LLM generation');
+      try {
+        const directUrl = `/api/llm/generate-quiz?t=${timestamp}&r=${Math.random()}`;
+        logMsg(`Calling ${directUrl}`);
+        
+        const res = await fetch(directUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            moduleId,
+            courseId,
+            forceRegenerate: true,
+            archiveOld: true,
+            timestamp,
+            requestId: uniqueId,
+            clearExisting: true,
+            bypassCache: Math.random()
+          })
+        });
+        
+        logMsg(`Direct LLM request completed with status: ${res.status}`);
+        return res.json();
+      } catch (directError) {
+        logMsg(`Error with direct LLM request: ${directError.message}`);
+        throw directError;
+      }
     },
     onSuccess: (data) => {
       if (data.success) {

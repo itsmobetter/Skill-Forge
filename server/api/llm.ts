@@ -7,6 +7,7 @@ import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import { db } from "../db";
+import { sql } from "drizzle-orm";
 
 interface QuizQuestion {
   text: string;
@@ -52,16 +53,16 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
     try {
       const userId = req.user!.id;
       let apiConfig = await storage.getUserApiConfig(userId);
-      
+
       if (!apiConfig) {
         // Create a new API config if one doesn't exist
         // Make sure temperature is a number
-        const temperature = typeof req.body.temperature === 'number' 
-          ? req.body.temperature 
-          : req.body.temperature 
-            ? Number(req.body.temperature) 
+        const temperature = typeof req.body.temperature === 'number'
+          ? req.body.temperature
+          : req.body.temperature
+            ? Number(req.body.temperature)
             : 0.7;
-            
+
         apiConfig = await storage.createApiConfig({
           userId,
           provider: req.body.provider || "Google AI",
@@ -189,7 +190,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         // For this demo, we'll use the material title and description
         pdfContents = pdfMaterials.map(m => `${m.title}: ${m.description || ''}`);
       }
-      
+
       // Try to get relevant transcript segments from vector DB if available
       let relevantSegments: any[] = [];
       if (process.env.OPENAI_API_KEY && apiConfig.useTranscriptions) {
@@ -203,9 +204,9 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
               courseId,
               5 // Limit to 5 most relevant segments
             );
-            
+
             if (segments && segments.length > 0) {
-              relevantSegments = segments.map(segment => 
+              relevantSegments = segments.map(segment =>
                 `[${Math.floor(segment.startTime / 60)}:${(segment.startTime % 60).toString().padStart(2, '0')} - ${Math.floor(segment.endTime / 60)}:${(segment.endTime % 60).toString().padStart(2, '0')}] ${segment.text}`
               );
               console.log(`Found ${relevantSegments.length} relevant transcript segments`);
@@ -273,12 +274,12 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       let userId: number;
       const { courseId, moduleId, count = 5, numQuestions, content, internal, forceRegenerate } = req.body;
       const finalQuestionCount = numQuestions || count || 5;
-      
+
       // For internal automated quiz generation calls
-      const isInternalRequest = 
-        internal === true || 
+      const isInternalRequest =
+        internal === true ||
         req.headers['x-internal-request'] === 'true';
-        
+
       if (isInternalRequest) {
         // Use admin user ID for internal requests
         const adminUser = await storage.getUserByUsername('syafiqazrin');
@@ -287,7 +288,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       } else if (req.user) {
         // Normal authenticated user
         userId = req.user.id;
-        
+
         // Verify user has admin rights
         if (!req.user.isAdmin) {
           return res.status(403).json({ message: "Admin privileges required" });
@@ -302,17 +303,17 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
 
       // Get the module info first
       const module = await storage.getModule(moduleId);
-      
+
       if (!module) {
         return res.status(404).json({ message: "Module not found" });
       }
-      
+
       // If courseId wasn't provided, get it from the module
       const effectiveCourseId = courseId || module.courseId;
-      
+
       // Now get the course info
       const course = await storage.getCourse(effectiveCourseId);
-      
+
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
@@ -320,19 +321,19 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       // Initialize course and module information with defaults
       let courseTitle = "Unknown Course";
       let moduleTitle = "Unknown Module";
-      
+
       // Update with primary course and module data when available
       if (course && course.title) {
         courseTitle = course.title;
       }
-      
+
       if (module && module.title) {
         moduleTitle = module.title;
       }
-      
+
       // Get content for quiz generation - from multiple possible sources
       let quizContent: string;
-      
+
       // 1. If content is provided directly in the request body, use that first
       if (content && typeof content === 'string' && content.trim().length > 100) {
         console.log(`[AUTO_QUIZ] Using provided content for quiz generation (${content.length} characters)`);
@@ -348,13 +349,13 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         } else {
           // 3. If no transcription, generate content based on module and course information
           console.log(`[AUTO_QUIZ] No valid transcription found, using module/course metadata to generate content`);
-          
+
           // Build a rich context from module and course data
-          const moduleDescription = module.description || ""; 
+          const moduleDescription = module.description || "";
           const courseDescription = course.description || "";
           const moduleTags = module.tags ? JSON.stringify(module.tags) : "";
           const moduleObjectives = module.objectives ? JSON.stringify(module.objectives) : "";
-          
+
           // For modules without transcriptions, use metadata and module description to generate quiz content
           const contextInfo = `
             Module Title: ${moduleTitle}
@@ -364,7 +365,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             Module Tags: ${moduleTags}
             Module Objectives: ${moduleObjectives}
           `.trim();
-          
+
           // Check if we have enough context data
           if (contextInfo.length < 100) {
             console.log(`[AUTO_QUIZ] Warning: Limited context information available for quiz generation`);
@@ -373,7 +374,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           } else {
             quizContent = `Generate quality management quiz questions based on this educational content: ${contextInfo}`;
           }
-          
+
           console.log(`[AUTO_QUIZ] Generated synthetic content for quiz generation (${quizContent.length} characters)`);
         }
       }
@@ -398,7 +399,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           "correctOptionId": "B" // The ID of the correct option
         }
       ]`;
-      
+
       const prompt = `Generate ${finalQuestionCount} multiple-choice quiz questions for the following module content:
 
       Course: ${courseTitle}
@@ -408,74 +409,64 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       ${quizContent}`;
 
       try {
-        // Generate quiz questions with the formatted content
-        console.log(`[AUTO_QUIZ] Generating ${finalQuestionCount} questions for module ${moduleId}`);
-        console.log(`[AUTO_QUIZ] Using course: ${courseTitle}, module: ${moduleTitle}`);
-        console.log(`[AUTO_QUIZ] Content length: ${quizContent.length} characters`);
-        
-        // Get existing questions
-        const existingQuestions = await storage.getQuizQuestions(moduleId);
-        // Always archive old questions when forcing regeneration or when archiveOld is explicitly set
-        const archiveOld = req.body.archiveOld === true || forceRegenerate === true;
-        
-        // Always delete existing questions for this module - this ensures we get fresh questions every time
-        if (existingQuestions.length > 0) {
-          console.log(`[AUTO_QUIZ] Found ${existingQuestions.length} existing questions for module ${moduleId}`);
-          console.log(`[AUTO_QUIZ] forceRegenerate: ${forceRegenerate}, archiveOld: ${archiveOld}`);
-          
-          console.log(`[AUTO_QUIZ] IMPORTANT: Deleting all ${existingQuestions.length} existing questions for module ${moduleId}`);
-          
-          try {
-            // Skip individual deletion which can be unreliable and use direct database query
-            console.log(`[AUTO_QUIZ] Using direct database query to delete all questions for module ${moduleId}`);
-            await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.moduleId, moduleId));
-            
-            // Verify deletion worked
-            const verifyDeletion = await storage.getQuizQuestions(moduleId);
-            console.log(`[AUTO_QUIZ] After deletion: ${verifyDeletion.length} questions remain`);
-            
-            if (verifyDeletion.length > 0) {
-              console.error(`[AUTO_QUIZ] CRITICAL ERROR: Failed to delete all questions for module ${moduleId}`);
-              // Try again with a different approach
-              await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
-              
-              // Final verification
-              const finalCheck = await storage.getQuizQuestions(moduleId);
-              console.log(`[AUTO_QUIZ] Final check after raw SQL: ${finalCheck.length} questions remain`);
+        console.log(`[AUTO_QUIZ ${Date.now()}] Processing quiz generation for module ${moduleId}`);
+        console.log(`[AUTO_QUIZ ${Date.now()}] forceRegenerate = ${forceRegenerate}, archiveOld = ${req.body.archiveOld}`);
+
+        // Always delete existing questions for this module first
+        try {
+          // Get existing questions
+          const existingQuestions = await storage.getQuizQuestions(moduleId);
+          console.log(`[AUTO_QUIZ ${Date.now()}] Found ${existingQuestions.length} existing questions for module ${moduleId}`);
+
+          if (existingQuestions.length > 0) {
+            console.log(`[AUTO_QUIZ ${Date.now()}] Deleting ALL ${existingQuestions.length} existing questions for module ${moduleId}`);
+
+            // Delete directly from database using raw SQL for reliability
+            if (db && db.execute) {
+              try {
+                await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
+                console.log(`[AUTO_QUIZ ${Date.now()}] Successfully deleted questions with direct SQL`);
+              } catch (sqlError) {
+                console.error(`[AUTO_QUIZ ${Date.now()}] Error with direct SQL deletion:`, sqlError);
+
+                // Fallback to regular deletion
+                for (const question of existingQuestions) {
+                  try {
+                    await storage.deleteQuizQuestion(question.id);
+                    console.log(`[AUTO_QUIZ ${Date.now()}] Deleted question ${question.id}`);
+                  } catch (deleteError) {
+                    console.error(`[AUTO_QUIZ ${Date.now()}] Failed to delete question ${question.id}:`, deleteError);
+                  }
+                }
+              }
             } else {
-              console.log(`[AUTO_QUIZ] Successfully deleted all old questions`);
+              // If db.execute isn't available, use regular deletion
+              for (const question of existingQuestions) {
+                try {
+                  await storage.deleteQuizQuestion(question.id);
+                  console.log(`[AUTO_QUIZ ${Date.now()}] Deleted question ${question.id}`);
+                } catch (deleteError) {
+                  console.error(`[AUTO_QUIZ ${Date.now()}] Failed to delete question ${question.id}:`, deleteError);
+                }
+              }
             }
-          } catch (deleteError) {
-            console.error(`[AUTO_QUIZ] Error deleting old questions:`, deleteError);
-            // Try one more method in case of error
-            try {
-              await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
-              console.log(`[AUTO_QUIZ] Attempted emergency raw SQL delete after error`);
-            } catch (emergencyError) {
-              console.error(`[AUTO_QUIZ] Emergency deletion also failed:`, emergencyError);
-            }
+
+            // Double-check that questions were deleted
+            const remainingQuestions = await storage.getQuizQuestions(moduleId);
+            console.log(`[AUTO_QUIZ ${Date.now()}] After deletion, ${remainingQuestions.length} questions remain`);
           }
+        } catch (deleteError) {
+          console.error(`[AUTO_QUIZ ${Date.now()}] Error deleting existing questions:`, deleteError);
+          // Continue with generation even if deletion fails
         }
-        
-        // If force regenerate is false and questions exist, return existing questions
-        // This block only runs if we didn't delete the questions above
-        if (existingQuestions.length > 0 && !forceRegenerate && !archiveOld) {
-          console.log(`[AUTO_QUIZ] Module ${moduleId} already has ${existingQuestions.length} questions and forceRegenerate is not set. Skipping generation.`);
-          return res.json({ 
-            success: true,
-            questionsExisted: true,
-            questionsCount: existingQuestions.length,
-            module: { id: moduleId, title: moduleTitle },
-            course: { id: effectiveCourseId, title: courseTitle }
-          });
-        }
-        
-        // Add a hint to ensure different questions 
+
+        // Skip the check for existing questions - we will always generate new ones
+        // Add a hint to ensure different questions
         const promptPrefix = "Please generate completely new and different questions that test understanding of the material. ";
-            
+
         const promptWithPrefix = promptPrefix + quizContent;
         console.log(`[AUTO_QUIZ] Generating new quiz with ${finalQuestionCount} questions`);
-        
+
         const generatedQuestions = await gemini.generateQuizQuestions(promptWithPrefix, finalQuestionCount);
 
         // Validate the structure of generated questions
@@ -483,12 +474,12 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           console.error("[AUTO_QUIZ] No questions were generated by the model");
           throw new Error("Failed to generate any quiz questions");
         }
-        
+
         if (!Array.isArray(generatedQuestions)) {
           console.error("[AUTO_QUIZ] Generated content is not an array:", typeof generatedQuestions);
           throw new Error("Generated content is not an array");
         }
-        
+
         console.log(`[AUTO_QUIZ] Successfully generated ${generatedQuestions.length} questions`);
 
         // Save the generated questions
@@ -500,24 +491,24 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             console.error("[AUTO_QUIZ] Skipping question without text");
             continue;
           }
-          
+
           if (!Array.isArray(question.options)) {
             console.error("[AUTO_QUIZ] Skipping question without valid options array:", question.text);
             continue;
           }
-          
+
           if (!question.correctOptionId) {
             console.error("[AUTO_QUIZ] Skipping question without correctOptionId:", question.text);
             continue;
           }
-          
+
           // Check if correctOptionId exists in options
-          const correctOption = question.options.find((opt: {id: string; text: string}) => opt.id === question.correctOptionId);
+          const correctOption = question.options.find((opt: { id: string; text: string }) => opt.id === question.correctOptionId);
           if (!correctOption) {
             console.error(`[AUTO_QUIZ] Skipping question with invalid correctOptionId: ${question.correctOptionId} not found in options`);
             continue;
           }
-          
+
           // Check that we have 4 options as required
           if (question.options.length !== 4) {
             console.error(`[AUTO_QUIZ] Skipping question with ${question.options.length} options (expected 4)`);
@@ -532,11 +523,11 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
               options: question.options,
               correctOptionId: question.correctOptionId
             };
-            
+
             try {
               // First try to validate using Zod schema
               const validatedQuestion = insertQuizQuestionSchema.parse(questionData);
-              
+
               // If validation passes, save to database
               const savedQuestion = await storage.createQuizQuestion(validatedQuestion);
               savedQuestions.push(savedQuestion);
@@ -566,18 +557,18 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             console.error("[AUTO_QUIZ] Error updating module with hasQuiz=true:", updateError);
             // Continue as we still want to return the saved questions
           }
-          
-          res.json({ 
-            success: true, 
-            questions: savedQuestions, 
-            count: savedQuestions.length 
+
+          res.json({
+            success: true,
+            questions: savedQuestions,
+            count: savedQuestions.length
           });
         } else {
           // If no questions were saved, return a more specific error
           console.error("[AUTO_QUIZ] No valid questions were saved for module", moduleId);
-          res.status(500).json({ 
+          res.status(500).json({
             success: false,
-            message: "Failed to save any valid quiz questions", 
+            message: "Failed to save any valid quiz questions",
             details: "The system generated quiz questions but none of them passed validation. Please try again."
           });
         }
@@ -597,12 +588,12 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       // Handle both authenticated users and internal system calls
       let userId: number;
       const { videoUrl, moduleId, internal } = req.body;
-      
+
       // For internal automated transcription calls
-      const isInternalRequest = 
-        internal === true || 
+      const isInternalRequest =
+        internal === true ||
         req.headers['x-internal-request'] === 'true';
-        
+
       if (isInternalRequest) {
         // Use admin user ID for internal requests
         const adminUser = await storage.getUserByUsername('syafiqazrin');
@@ -611,7 +602,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
       } else if (req.user) {
         // Normal authenticated user
         userId = req.user.id;
-        
+
         // Verify user has admin rights if trying to save to a module
         if (moduleId && !req.user.isAdmin) {
           return res.status(403).json({ message: "Admin privileges required to save transcriptions" });
@@ -626,10 +617,10 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
 
       // Try to get video ID from YouTube URL
       const videoIdMatch = videoUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-      
-      // Use the YouTube ID if available, otherwise use the URL or a reference identifier
+
+      // Use the YouTube ID if available, otherwise use the URL or a provided moduleId
       let videoId;
-      
+
       if (videoIdMatch && videoIdMatch[1]) {
         videoId = videoIdMatch[1];
         console.log(`[TRANSCRIPTION] Extracted YouTube ID: ${videoId}`);
@@ -647,7 +638,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
 
       // Generate a timestamped transcription for better AI referencing
       const { transcript, segments } = await gemini.generateTimestampedTranscript(videoId);
-      
+
       // If a module ID is provided, save the transcription and process segments for vector DB
       if (moduleId && transcript) {
         try {
@@ -656,11 +647,11 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           if (!module) {
             return res.status(404).json({ message: "Module not found" });
           }
-          
+
           // Get course ID for the module for context
           const moduleWithCourse = await storage.getCourseModules(module.courseId);
           const courseId = module.courseId;
-          
+
           // Prepare segments for vector storage
           const vectorSegments = segments.map((segment: any) => ({
             id: nanoid(8),
@@ -670,7 +661,7 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             startTime: segment.startTime,
             endTime: segment.endTime
           }));
-          
+
           // Add to vector DB if Gemini API key is available
           let vectorId = null;
           if (process.env.GEMINI_API_KEY) {
@@ -683,21 +674,21 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
               // Continue even if vector storage fails
             }
           }
-          
+
           // Save or update the transcription in the main database
           const existingTranscription = await storage.getModuleTranscription(moduleId);
 
           try {
             if (existingTranscription) {
               // Create an update object with basic fields only
-              const updateData: any = { 
+              const updateData: any = {
                 text: transcript,
                 videoId
               };
-              
+
               // We'll store the segments in vector database only, not in the main database
               console.log(`[TRANSCRIPTION] Adding ${segments ? segments.length : 0} timestamped segments to vector DB only`);
-              
+
               await storage.updateModuleTranscription(existingTranscription.id, updateData);
             } else {
               // Create an insert object with only the basic fields that match our schema
@@ -706,10 +697,10 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
                 videoId,
                 text: transcript
               };
-              
+
               // We'll store the segments in vector database only, not in the main database
               console.log(`[TRANSCRIPTION] Adding ${segments ? segments.length : 0} timestamped segments to vector DB only`);
-              
+
               await storage.createModuleTranscription(transcriptionData);
             }
           } catch (storageError) {

@@ -313,13 +313,41 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       // Generate a unique request ID
       const requestId = Math.random().toString(36).substring(2, 15);
       
-      // Make an internal request to the LLM service to generate new quiz questions
-      // This reuses the existing endpoint but forces regeneration
+      // First, explicitly delete all existing quiz questions for this module
+      console.log(`[QUIZ REGEN ${Date.now()}] Step 1: Explicitly deleting all existing questions for module ${moduleId}`);
+      try {
+        const { db, sql } = require('../db');
+        
+        // Direct database delete for reliability
+        await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
+        console.log(`[QUIZ REGEN ${Date.now()}] Successfully deleted all questions for module ${moduleId} using direct SQL`);
+      } catch (deleteError) {
+        console.error(`[QUIZ REGEN ${Date.now()}] Error deleting questions with direct SQL:`, deleteError);
+        
+        // Fallback to using storage API
+        try {
+          const storage = require('../storage').storage;
+          const existingQuestions = await storage.getQuizQuestions(moduleId);
+          console.log(`[QUIZ REGEN ${Date.now()}] Found ${existingQuestions.length} questions to delete via API`);
+          
+          for (const question of existingQuestions) {
+            await storage.deleteQuizQuestion(question.id);
+            console.log(`[QUIZ REGEN ${Date.now()}] Deleted question ${question.id}`);
+          }
+        } catch (storageError) {
+          console.error(`[QUIZ REGEN ${Date.now()}] Error with fallback deletion:`, storageError);
+        }
+      }
+      
+      // Now make the internal request to generate new questions
+      console.log(`[QUIZ REGEN ${Date.now()}] Step 2: Generating new questions for module ${moduleId}`);
+      const uniqueTimestamp = Date.now();
       const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/llm/generate-quiz`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Internal-Request': 'true'
+          'X-Internal-Request': 'true',
+          'Cache-Control': 'no-cache, no-store'
         },
         body: JSON.stringify({
           courseId,
@@ -328,8 +356,9 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           internal: true,
           forceRegenerate: true,  // Signal that this is a regeneration request
           archiveOld: true,       // Explicit signal to archive old questions
-          requestId: requestId,   // Add unique ID to ensure this is treated as a new request
-          timestamp: Date.now()   // Add timestamp to prevent caching
+          requestId: `${requestId}-${uniqueTimestamp}`,  // Add unique ID to ensure this is treated as a new request
+          timestamp: uniqueTimestamp,  // Add timestamp to prevent caching
+          bypassCache: Math.random()   // Additional randomness to bypass caching
         })
       });
       
