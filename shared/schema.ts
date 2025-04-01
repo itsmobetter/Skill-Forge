@@ -328,3 +328,31 @@ export type InsertChatInteraction = z.infer<typeof insertChatInteractionSchema>;
 
 export type Certificate = typeof certificates.$inferSelect;
 export type InsertCertificate = z.infer<typeof insertCertificateSchema>;
+
+// Standard Operating Procedures (SOPs)
+export const standardOperatingProcedures = pgTable("standard_operating_procedures", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  objective: text("objective").notNull(),
+  scope: text("scope").notNull(),
+  responsibilities: jsonb("responsibilities").default([]).notNull(),
+  procedure: jsonb("procedure").default([]).notNull(),
+  references: jsonb("references").default([]).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+}, (table) => {
+  return {
+    titleIdx: index("sops_title_idx").on(table.title),
+    createdByIdx: index("sops_created_by_idx").on(table.createdBy),
+  };
+});
+
+export const insertSOPSchema = createInsertSchema(standardOperatingProcedures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SOP = typeof standardOperatingProcedures.$inferSelect;
+export type InsertSOP = z.infer<typeof insertSOPSchema>;

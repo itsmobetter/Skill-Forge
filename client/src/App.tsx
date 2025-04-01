@@ -16,6 +16,7 @@ import MyCoursesPage from "@/pages/my-courses-page";
 import CertificatesPage from "@/pages/certificates-page";
 import ProfilePage from "@/pages/profile-page";
 import AboutPage from "@/pages/about-page";
+import SOPPage from "@/pages/sop-page";
 import AdminCoursesPage from "@/pages/admin-courses-page";
 import AdminUsersPage from "@/pages/admin-users-page";
 import AdminApiConfigPage from "@/pages/admin-api-config-page";
@@ -53,6 +54,7 @@ function Router() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/about" component={AboutPage} />
+      <ProtectedRoute path="/sop" component={SOPPage} />
       
       {/* Admin routes */}
       <AdminProtectedRoute path="/admin/courses" component={AdminCoursesPage} />

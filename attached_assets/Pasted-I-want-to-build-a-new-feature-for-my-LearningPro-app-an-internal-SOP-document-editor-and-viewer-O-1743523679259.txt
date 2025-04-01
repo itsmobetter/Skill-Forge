@@ -1,0 +1,50 @@
+I want to build a new feature for my LearningPro app: an internal SOP document editor and viewer.
+
+Objective:
+Instead of uploading documents, I want to allow administrators to create structured SOPs directly within the app. Admins will fill in SOP content using a form, and users will view a formatted version and interact with it through the existing AI chatbot.
+
+Project setup:
+- Frontend is in `/client/src` using TypeScript, Vite, and Tailwind CSS.
+- Backend is in `/server/` with Express-style routing in `routes.ts`.
+- Chatbot logic is handled in `gemini.ts`, `vector-db.ts`, and `llm.ts`.
+- File-based or in-memory data handling is currently used in `storage.ts`.
+- App uses a monorepo structure with existing type safety (`tsconfig.json`, `tailwind.config.ts`).
+
+Tasks:
+
+1. Backend API
+- Add a GET route at `/api/sop` to load a single SOP document from a JSON file (e.g., `server/sopData.json`).
+- Add a POST route at `/api/sop` to save or update the SOP document.
+- Use `fs.readFileSync` and `fs.writeFileSync` to handle read/write operations.
+- No need for full database integration at this stage.
+
+2. Frontend Components
+Create two new components:
+
+- `SOPEditor.tsx`  
+  An admin-only interface with form fields for:
+  - Title
+  - Objective
+  - Scope
+  - Responsibilities (as a list)
+  - Procedure (as steps)
+  - References (as a list)
+
+  Load the document on mount via `GET /api/sop`, and allow saving with `POST /api/sop`.
+
+- `SOPViewer.tsx`  
+  Displays the same SOP in a clean, structured format using Tailwind utility classes.
+  Include a button labeled “Ask AI about this SOP” that sends the full SOP object to the chatbot.
+
+3. Chatbot Integration
+Update the chatbot logic (`gemini.ts` or `vector-db.ts`) to accept and use SOP data:
+- Accept a structure like `{ type: 'sop', data: { ... } }`
+- Ensure that SOP content is included in the context so users can ask questions related to it.
+
+Additional Notes:
+- Follow the project’s existing style and folder structure.
+- The SOP feature should be easily extensible to support multiple documents in the future.
+- You may assume authentication and role handling is already in place.
+- If needed, add a navigation link to access the new SOP editor and viewer.
+
+Begin by scaffolding the backend routes and frontend pages, and integrate them incrementally with the chatbot.

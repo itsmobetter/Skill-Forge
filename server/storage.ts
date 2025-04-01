@@ -12,7 +12,8 @@ import {
   ModuleTranscription, InsertModuleTranscription,
   ChatInteraction, InsertChatInteraction,
   ModuleCompletion,
-  Certificate, InsertCertificate
+  Certificate, InsertCertificate,
+  SOP, InsertSOP
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -35,6 +36,12 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserPassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean>;
   updateUserAdminStatus(userId: number, isAdmin: boolean): Promise<boolean>;
+  
+  // SOP management
+  getAllSOPs(): Promise<SOP[]>;
+  getSOP(id: string): Promise<SOP | undefined>;
+  createSOP(sop: InsertSOP): Promise<SOP>;
+  updateSOP(id: string, sop: Partial<SOP>): Promise<SOP>;
 
   // User profile
   getUserProfile(userId: number): Promise<UserProfile | undefined>;
@@ -117,6 +124,7 @@ export class MemStorage implements IStorage {
   private quizResults: Map<number, QuizResult>;
   private moduleTranscriptions: Map<string, ModuleTranscription>;
   private chatInteractions: Map<number, ChatInteraction>;
+  private standardOperatingProcedures: Map<string, SOP> = new Map();
 
   sessionStore: any;
 
@@ -699,6 +707,53 @@ export class MemStorage implements IStorage {
     return newCertificate;
   }
 
+  // SOP management
+  async getAllSOPs(): Promise<SOP[]> {
+    return Array.from(this.standardOperatingProcedures.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getSOP(id: string): Promise<SOP | undefined> {
+    return this.standardOperatingProcedures.get(id);
+  }
+
+  async createSOP(sop: InsertSOP): Promise<SOP> {
+    const id = Math.random().toString(36).substring(2, 11);
+    const now = new Date();
+    
+    const newSOP: SOP = {
+      ...sop,
+      id,
+      createdAt: now,
+      updatedAt: now,
+      // Initialize missing fields with empty objects or null values as appropriate
+      responsibilities: sop.responsibilities || {},
+      procedure: sop.procedure || {},
+      references: sop.references || {},
+      createdBy: sop.createdBy || null
+    };
+    
+    this.standardOperatingProcedures.set(id, newSOP);
+    return newSOP;
+  }
+
+  async updateSOP(id: string, sopUpdate: Partial<SOP>): Promise<SOP> {
+    const existingSOP = this.standardOperatingProcedures.get(id);
+    if (!existingSOP) {
+      throw new Error("Standard operating procedure not found");
+    }
+    
+    // Update the SOP with new values, keeping existing ones if not provided
+    const updatedSOP: SOP = {
+      ...existingSOP,
+      ...sopUpdate,
+      updatedAt: new Date() // Always update the timestamp
+    };
+    
+    this.standardOperatingProcedures.set(id, updatedSOP);
+    return updatedSOP;
+  }
+
   async deleteCertificate(id: string): Promise<void> {
     this.certificates.delete(id);
   }
@@ -724,7 +779,8 @@ import {
   QuizQuestion, InsertQuizQuestion, QuizResult, InsertQuizResult,
   ModuleTranscription, InsertModuleTranscription,
   ChatInteraction, InsertChatInteraction,
-  Certificate, InsertCertificate
+  Certificate, InsertCertificate,
+  SOP, InsertSOP
 } from "@shared/schema";
 
 const PostgresSessionStore = connectPg(session);
@@ -1698,6 +1754,79 @@ export class DatabaseStorage implements IStorage {
         await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.id, questionId));
       },
       `Failed to delete quiz question with ID ${questionId}`
+    );
+  }
+
+  // SOP management
+  async getAllSOPs(): Promise<SOP[]> {
+    return executeQuery(
+      async () => {
+        return await db.select()
+          .from(schema.standardOperatingProcedures)
+          .orderBy(desc(schema.standardOperatingProcedures.createdAt));
+      },
+      "Failed to get all standard operating procedures"
+    );
+  }
+
+  async getSOP(id: string): Promise<SOP | undefined> {
+    return executeQuery(
+      async () => {
+        const [sop] = await db.select()
+          .from(schema.standardOperatingProcedures)
+          .where(eq(schema.standardOperatingProcedures.id, id));
+        return sop;
+      },
+      `Failed to get SOP with ID ${id}`
+    );
+  }
+
+  async createSOP(sop: InsertSOP): Promise<SOP> {
+    return executeQuery(
+      async () => {
+        const id = Math.random().toString(36).substring(2, 11);
+        
+        // Create the SOP with current timestamps
+        const [newSOP] = await db.insert(schema.standardOperatingProcedures)
+          .values({
+            ...sop,
+            id,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+          
+        return newSOP;
+      },
+      "Failed to create standard operating procedure"
+    );
+  }
+
+  async updateSOP(id: string, sopUpdate: Partial<SOP>): Promise<SOP> {
+    return executeQuery(
+      async () => {
+        const [existingSOP] = await db.select()
+          .from(schema.standardOperatingProcedures)
+          .where(eq(schema.standardOperatingProcedures.id, id));
+          
+        if (!existingSOP) {
+          throw new Error("Standard operating procedure not found");
+        }
+        
+        // Always update the updatedAt timestamp when modifying a SOP
+        const updatedData = {
+          ...sopUpdate,
+          updatedAt: new Date()
+        };
+        
+        const [updatedSOP] = await db.update(schema.standardOperatingProcedures)
+          .set(updatedData)
+          .where(eq(schema.standardOperatingProcedures.id, id))
+          .returning();
+          
+        return updatedSOP;
+      },
+      `Failed to update standard operating procedure with ID ${id}`
     );
   }
 }
