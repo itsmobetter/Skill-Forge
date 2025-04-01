@@ -10,10 +10,10 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
     try {
       // Find any quiz results for the current user
       const userId = req.user!.id;
-      
+
       // Use the storage interface rather than direct query
       const results = await storage.getQuizResults(userId, "any"); // "any" is a placeholder, we'll get all results
-      
+
       res.json({
         message: "Quiz results debug info",
         userId,
@@ -40,21 +40,21 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
   router.get("/courses/:courseId/modules/:moduleId/quiz", requireAuth, async (req: Request, res: Response) => {
     try {
       const { courseId, moduleId } = req.params;
-      
+
       // Verify the course and module exist
       const course = await storage.getCourse(courseId);
       const module = await storage.getModule(moduleId);
-      
+
       if (!course || !module || module.courseId !== courseId) {
         return res.status(404).json({ message: "Course or module not found" });
       }
-      
+
       // Get quiz questions
       const questions = await storage.getQuizQuestions(moduleId);
-      
+
       // Don't return the correct answer to the client
       const sanitizedQuestions = questions.map(({ correctOptionId, ...rest }) => rest);
-      
+
       res.json(sanitizedQuestions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch quiz questions" });
@@ -67,53 +67,53 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       const userId = req.user!.id;
       const { courseId, moduleId } = req.params;
       const { answers, timeSpentSeconds } = req.body;
-      
+
       if (!Array.isArray(answers)) {
         return res.status(400).json({ message: "Invalid answers format" });
       }
-      
+
       // Verify the course and module exist
       const course = await storage.getCourse(courseId);
       const module = await storage.getModule(moduleId);
-      
+
       if (!course || !module || module.courseId !== courseId) {
         return res.status(404).json({ message: "Course or module not found" });
       }
-      
+
       // Get quiz questions with correct answers
       const questions = await storage.getQuizQuestions(moduleId);
-      
+
       if (questions.length === 0) {
         return res.status(404).json({ message: "No quiz questions found for this module" });
       }
-      
+
       // Evaluate the answers
       let correct = 0;
       const feedback: Record<string, boolean> = {};
-      
+
       for (const answer of answers) {
         const question = questions.find(q => q.id === answer.questionId);
-        
+
         if (question) {
           const isCorrect = question.correctOptionId === answer.answerId;
           feedback[answer.questionId] = isCorrect;
-          
+
           if (isCorrect) {
             correct++;
           }
         }
       }
-      
+
       const total = questions.length;
       const score = (correct / total) * 100;
       const passed = score >= 80; // 80% passing threshold (requirement for employee competency assessment)
-      
+
       // Prepare answers data for storage
       const answersData = answers.map(answer => ({
         questionId: answer.questionId,
         selectedOptionId: answer.answerId
       }));
-      
+
       // Save the quiz result with questions, answers, and time spent
       const quizResult = await storage.createQuizResult({
         userId,
@@ -125,22 +125,22 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
         answers: answersData,
         completedAt: new Date()
       });
-      
+
       // If passed, mark the module as completed
       if (passed) {
         await storage.updateModuleCompletion(userId, moduleId, true);
-        
+
         // Update course progress
         const userProgress = await storage.getUserCourseProgress(userId, courseId);
-        
+
         if (userProgress) {
           // Get all modules for this course
           const modules = await storage.getCourseModules(courseId);
-          
+
           // Find the next module
           const currentModuleIndex = modules.findIndex(m => m.id === moduleId);
           const nextModuleIndex = currentModuleIndex + 1;
-          
+
           if (nextModuleIndex < modules.length) {
             // Move to the next module
             const nextModule = modules[nextModuleIndex];
@@ -149,10 +149,10 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
               currentModuleOrder: nextModule.order
             });
           }
-          
+
           // Check if all modules are completed
           const completedModules = await storage.getCompletedModules(userId, courseId);
-          
+
           // Only consider modules that have quizzes
           const modulesWithQuiz = modules.filter(m => m.hasQuiz);
           const allRequiredModulesCompleted = 
@@ -161,7 +161,7 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
             // Otherwise check all modules with quizzes are completed
             (modulesWithQuiz.length > 0 && 
              modulesWithQuiz.every(m => completedModules.some(cm => cm.moduleId === m.id)));
-          
+
           if (allRequiredModulesCompleted) {
             console.log(`Marking course ${courseId} as completed for user ${userId}`);
             await storage.updateUserCourseProgress(userProgress.id, {
@@ -170,7 +170,7 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           }
         }
       }
-      
+
       res.json({
         correct,
         total,
@@ -189,35 +189,35 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
     try {
       const { courseId, moduleId } = req.params;
       const { questions } = req.body;
-      
+
       if (!Array.isArray(questions)) {
         return res.status(400).json({ message: "Questions must be an array" });
       }
-      
+
       // Verify the course and module exist
       const course = await storage.getCourse(courseId);
       const module = await storage.getModule(moduleId);
-      
+
       if (!course || !module || module.courseId !== courseId) {
         return res.status(404).json({ message: "Course or module not found" });
       }
-      
+
       // Validate and create each question
       const createdQuestions = [];
-      
+
       for (const questionData of questions) {
         const validatedData = insertQuizQuestionSchema.parse({
           ...questionData,
           moduleId
         });
-        
+
         const question = await storage.createQuizQuestion(validatedData);
         createdQuestions.push(question);
       }
-      
+
       // Update module to indicate it has a quiz
       await storage.updateModule(moduleId, { hasQuiz: true });
-      
+
       res.status(201).json(createdQuestions);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -232,12 +232,12 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
     try {
       const userId = req.user!.id;
       const { moduleId } = req.params;
-      
+
       const results = await storage.getQuizResults(userId, moduleId);
-      
+
       // Log the quiz results to check what data is available
       console.log('Quiz results data:', JSON.stringify(results).substring(0, 200) + '...');
-      
+
       // Make sure the results are being returned with the questions and answers data
       // The PostgreSQL jsonb fields should be parsed automatically by drizzle-orm
       res.json(results);
@@ -246,65 +246,65 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       res.status(500).json({ message: "Failed to fetch quiz results" });
     }
   });
-  
+
   // Get quiz questions for history view (with answer info for completed quizzes)
   router.get("/courses/:courseId/modules/:moduleId/quiz/questions", requireAuth, async (req: Request, res: Response) => {
     try {
       const { courseId, moduleId } = req.params;
-      
+
       // Verify the course and module exist
       const course = await storage.getCourse(courseId);
       const module = await storage.getModule(moduleId);
-      
+
       if (!course || !module || module.courseId !== courseId) {
         return res.status(404).json({ message: "Course or module not found" });
       }
-      
+
       // Get quiz questions with all information including correct answers
       // This is safe because it's only used for viewing history after completion
       const questions = await storage.getQuizQuestions(moduleId);
-      
+
       res.json(questions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch quiz questions with answers" });
     }
   });
-  
+
   // Regenerate quiz questions for a module
   router.post("/courses/:courseId/modules/:moduleId/quiz/regenerate", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
       const { courseId, moduleId } = req.params;
-      
+
       // Verify the course and module exist
       const course = await storage.getCourse(courseId);
       const module = await storage.getModule(moduleId);
-      
+
       if (!course || !module || module.courseId !== courseId) {
         return res.status(404).json({ message: "Course or module not found" });
       }
-      
+
       console.log(`[QUIZ_REGENERATE] User ${userId} requested quiz regeneration for module ${moduleId}`);
-      
+
       // First, delete all existing questions to ensure we start fresh
       try {
         const existingQuestions = await storage.getQuizQuestions(moduleId);
         console.log(`[QUIZ_REGENERATE] Found ${existingQuestions.length} existing questions to delete`);
-        
+
         if (existingQuestions.length > 0) {
           // Use direct database deletion for reliability
           console.log(`[QUIZ_REGENERATE] Using direct database query to delete all questions`);
           await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.moduleId, moduleId));
-          
+
           // Verify deletion worked
           const remainingQuestions = await storage.getQuizQuestions(moduleId);
           console.log(`[QUIZ_REGENERATE] After deletion: ${remainingQuestions.length} questions remain`);
-          
+
           if (remainingQuestions.length > 0) {
             console.log(`[QUIZ_REGENERATE] Some questions remain, trying raw SQL query`);
             await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
             console.log(`[QUIZ_REGENERATE] Executed raw SQL deletion`);
-            
+
             // Final check
             const finalCheck = await storage.getQuizQuestions(moduleId);
             console.log(`[QUIZ_REGENERATE] Final verification: ${finalCheck.length} questions remain`);
@@ -320,27 +320,27 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           console.error(`[QUIZ_REGENERATE] Emergency SQL deletion also failed:`, sqlError);
         }
       }
-      
+
       // Generate a unique request ID
       const requestId = Math.random().toString(36).substring(2, 15);
-      
+
       // First, explicitly delete all existing quiz questions for this module
       console.log(`[QUIZ REGEN ${Date.now()}] Step 1: Explicitly deleting all existing questions for module ${moduleId}`);
       try {
         const { db, sql } = require('../db');
-        
+
         // Direct database delete for reliability
         await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
         console.log(`[QUIZ REGEN ${Date.now()}] Successfully deleted all questions for module ${moduleId} using direct SQL`);
       } catch (deleteError) {
         console.error(`[QUIZ REGEN ${Date.now()}] Error deleting questions with direct SQL:`, deleteError);
-        
+
         // Fallback to using storage API
         try {
           const storage = require('../storage').storage;
           const existingQuestions = await storage.getQuizQuestions(moduleId);
           console.log(`[QUIZ REGEN ${Date.now()}] Found ${existingQuestions.length} questions to delete via API`);
-          
+
           for (const question of existingQuestions) {
             await storage.deleteQuizQuestion(question.id);
             console.log(`[QUIZ REGEN ${Date.now()}] Deleted question ${question.id}`);
@@ -349,7 +349,7 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           console.error(`[QUIZ REGEN ${Date.now()}] Error with fallback deletion:`, storageError);
         }
       }
-      
+
       // Now make the internal request to generate new questions
       console.log(`[QUIZ REGEN ${Date.now()}] Step 2: Generating new questions for module ${moduleId}`);
       const uniqueTimestamp = Date.now();
@@ -372,41 +372,43 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           bypassCache: Math.random()   // Additional randomness to bypass caching
         })
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         return res.status(response.status).json(errorData);
       }
-      
+
       const result = await response.json();
       res.json(result);
     } catch (error) {
       console.error("Quiz regeneration error:", error);
-
+      res.status(500).json({ message: "Failed to regenerate quiz questions", error: (error as Error).message });
+    }
+  });
   // Direct database reset endpoint for quiz questions
   router.post("/courses/:courseId/modules/:moduleId/quiz/reset-database", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
       const { moduleId } = req.params;
       const timestamp = Date.now();
-      
+
       console.log(`[QUIZ DB RESET ${timestamp}] User ${userId} requested direct database reset for module ${moduleId}`);
-      
+
       try {
         // First try to use the provided database functions
         const { db, sql } = require('../db');
-        
+
         // Direct SQL approach with explicit error handling
         console.log(`[QUIZ DB RESET ${timestamp}] Executing direct DELETE SQL command`);
         try {
           // Execute raw DELETE SQL
           await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
           console.log(`[QUIZ DB RESET ${timestamp}] DELETE SQL command executed successfully`);
-          
+
           // Double-check that deletion worked
           const remainingQuestions = await storage.getQuizQuestions(moduleId);
           console.log(`[QUIZ DB RESET ${timestamp}] After deletion: ${remainingQuestions.length} questions remain`);
-          
+
           return res.json({ 
             success: true, 
             message: `Quiz questions deleted successfully. Remaining: ${remainingQuestions.length}`,
@@ -434,10 +436,6 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
         message: "Failed to reset quiz database", 
         error: (error as Error).message 
       });
-    }
-  });
-
-      res.status(500).json({ message: "Failed to regenerate quiz questions", error: (error as Error).message });
     }
   });
 }
