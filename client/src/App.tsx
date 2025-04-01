@@ -55,6 +55,9 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/about" component={AboutPage} />
       <ProtectedRoute path="/sop" component={SOPPage} />
+      <ProtectedRoute path="/sop/create" component={SOPPage} />
+      <ProtectedRoute path="/sop/:id" component={SOPPage} />
+      <ProtectedRoute path="/sop/:id/edit" component={SOPPage} />
       
       {/* Admin routes */}
       <AdminProtectedRoute path="/admin/courses" component={AdminCoursesPage} />
