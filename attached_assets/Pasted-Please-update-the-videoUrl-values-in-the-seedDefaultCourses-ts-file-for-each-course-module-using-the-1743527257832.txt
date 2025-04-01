@@ -1,0 +1,79 @@
+Please update the videoUrl values in the seedDefaultCourses.ts file for each course module using the mappings below. Keep the rest of the module data (like title, duration, objectives, etc.) unchanged. Only replace the videoUrl field with the new URL provided for each title.
+
+⸻
+
+1. ISO 9001:2015 Fundamentals
+	1.	Introduction to ISO 9001:2015
+https://www.youtube.com/embed/Nhlv_3-dQSk
+	2.	Quality Management Principles
+https://www.youtube.com/embed/adaOKKkamT8
+	3.	Process Approach & PDCA
+https://www.youtube.com/embed/otnEiom_BJM
+	4.	Risk-Based Thinking
+https://www.youtube.com/embed/lJqqM-bdDMI
+	5.	Documentation Requirements
+https://www.youtube.com/embed/qSVqDNOkOTo
+
+⸻
+
+2. Statistical Process Control (SPC)
+	1.	Fundamentals of Statistics in Quality Control
+https://www.youtube.com/embed/e5g2NmIUdck
+	2.	Variable Control Charts
+https://www.youtube.com/embed/Kw_ZMiMNi04
+	3.	Attribute Control Charts
+https://www.youtube.com/embed/B5uIVEY3LRQ
+	4.	Process Capability Analysis
+https://www.youtube.com/embed/Sljmwulmrdw
+	5.	Implementing SPC in Your Organization
+https://info.minitab.com/en/real-time-statistical-process-control-training-video-ty
+
+⸻
+
+3. Process Capability (Cp & Cpk)
+	1.	Introduction to Process Capability
+https://www.youtube.com/embed/r6xa7ZpfGn8
+	2.	Process Variation and Distribution
+https://www.youtube.com/embed/TfVcP_drj50
+	3.	Cp & Cpk: Calculation and Interpretation
+https://www.youtube.com/embed/B5uIVEY3LRQ
+	4.	Improving Process Capability
+https://www.youtube.com/embed/Sljmwulmrdw
+	5.	Case Studies and Applications
+https://www.youtube.com/embed/B5uIVEY3LRQ
+
+⸻
+
+4. Quality Control Fundamentals
+	1.	Introduction to Quality Control
+https://www.youtube.com/embed/3g2F3cW9NCE
+	2.	Quality Management Systems
+https://www.youtube.com/embed/4g1i0mWbG7A
+	3.	Statistical Tools for Quality Control
+https://www.youtube.com/embed/5h2z4m4k6bQ
+	4.	Process Improvement Techniques
+https://www.youtube.com/embed/6i7z5n7l8cR
+	5.	Quality Auditing and Compliance
+https://www.youtube.com/embed/7j8z6o9m0dS
+
+⸻
+
+5. Advanced Statistical Methods for Engineers
+	1.	Design of Experiments (DOE)
+https://www.youtube.com/embed/8k9z7p1q2eT
+	2.	Multivariate Analysis
+https://www.youtube.com/embed/9l0z8q3r4fU
+	3.	Regression Analysis
+https://www.youtube.com/embed/0m1z9r5s6gV
+	4.	Time Series Analysis
+https://www.youtube.com/embed/1n2z0t7u8hW
+	5.	Reliability Engineering
+https://www.youtube.com/embed/2o3z1v9w0iX
+
+⸻
+
+Important Notes:
+	•	Match each title field to the correct video URL.
+	•	Only update the videoUrl field.
+	•	Ensure there are no duplicates or incorrect mappings.
+	•	All other data structures must remain untouched.
