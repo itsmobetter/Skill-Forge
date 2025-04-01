@@ -18,20 +18,43 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
 
   const generateQuizMutation = useMutation({
     mutationFn: async () => {
-      console.log(`Generating new quiz for module ${moduleId}, archiving old questions`);
-      // Generate a unique request ID to ensure the server treats this as a completely new request
-      const uniqueId = Math.random().toString(36).substring(2, 15);
-      console.log(`Generating quiz with unique request ID: ${uniqueId}`);
+      const timestamp = new Date().getTime();
+      const uniqueId = Math.random().toString(36).substring(2, 15) + '-' + timestamp;
       
+      console.log(`[QUIZ GEN ${timestamp}] Starting quiz generation for module ${moduleId}`);
+      console.log(`[QUIZ GEN ${timestamp}] Using unique request ID: ${uniqueId}`);
+      
+      // First make a direct call to clear existing questions via the quiz API
+      try {
+        console.log(`[QUIZ GEN ${timestamp}] First attempting to clear existing questions via direct API call`);
+        const clearRes = await apiRequest('POST', `/api/courses/${courseId}/modules/${moduleId}/quiz/regenerate`, {
+          timestamp,
+          requestId: uniqueId
+        });
+        
+        if (clearRes.ok) {
+          console.log(`[QUIZ GEN ${timestamp}] Successfully triggered regeneration via quiz API`);
+        } else {
+          console.error(`[QUIZ GEN ${timestamp}] Failed to trigger regeneration: ${await clearRes.text()}`);
+        }
+      } catch (clearError) {
+        console.error(`[QUIZ GEN ${timestamp}] Error clearing questions:`, clearError);
+      }
+      
+      // Now generate new questions
+      console.log(`[QUIZ GEN ${timestamp}] Generating new quiz questions for module ${moduleId}`);
       const res = await apiRequest('POST', '/api/llm/generate-quiz', {
         moduleId,
         courseId,
-        forceRegenerate: true, // Always force regeneration of new questions
-        archiveOld: true, // Signal to archive old questions
-        timestamp: new Date().getTime(), // Add timestamp to prevent caching
-        requestId: uniqueId, // Add unique ID to ensure this is treated as a new request
-        clearExisting: true // Explicitly request clearing existing questions
+        forceRegenerate: true,
+        archiveOld: true,
+        timestamp,
+        requestId: uniqueId,
+        clearExisting: true,
+        bypassCache: Math.random() // Add random value to prevent any caching
       });
+      
+      console.log(`[QUIZ GEN ${timestamp}] Request completed with status: ${res.status}`);
       return res.json();
     },
     onSuccess: (data) => {

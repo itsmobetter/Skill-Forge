@@ -281,14 +281,33 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
         console.log(`[QUIZ_REGENERATE] Found ${existingQuestions.length} existing questions to delete`);
         
         if (existingQuestions.length > 0) {
-          for (const question of existingQuestions) {
-            await storage.deleteQuizQuestion(question.id);
+          // Use direct database deletion for reliability
+          console.log(`[QUIZ_REGENERATE] Using direct database query to delete all questions`);
+          await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.moduleId, moduleId));
+          
+          // Verify deletion worked
+          const remainingQuestions = await storage.getQuizQuestions(moduleId);
+          console.log(`[QUIZ_REGENERATE] After deletion: ${remainingQuestions.length} questions remain`);
+          
+          if (remainingQuestions.length > 0) {
+            console.log(`[QUIZ_REGENERATE] Some questions remain, trying raw SQL query`);
+            await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
+            console.log(`[QUIZ_REGENERATE] Executed raw SQL deletion`);
+            
+            // Final check
+            const finalCheck = await storage.getQuizQuestions(moduleId);
+            console.log(`[QUIZ_REGENERATE] Final verification: ${finalCheck.length} questions remain`);
           }
-          console.log(`[QUIZ_REGENERATE] Successfully deleted ${existingQuestions.length} questions`);
         }
       } catch (deleteError) {
         console.error(`[QUIZ_REGENERATE] Error deleting existing questions:`, deleteError);
-        // Continue anyway to try to generate new questions
+        // Try one more approach with raw SQL
+        try {
+          console.log(`[QUIZ_REGENERATE] Attempting emergency raw SQL deletion`);
+          await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
+        } catch (sqlError) {
+          console.error(`[QUIZ_REGENERATE] Emergency SQL deletion also failed:`, sqlError);
+        }
       }
       
       // Generate a unique request ID

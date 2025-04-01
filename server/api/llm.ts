@@ -418,39 +418,42 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         // Always archive old questions when forcing regeneration or when archiveOld is explicitly set
         const archiveOld = req.body.archiveOld === true || forceRegenerate === true;
         
-        // If we have existing questions and need to regenerate, archive them first
+        // Always delete existing questions for this module - this ensures we get fresh questions every time
         if (existingQuestions.length > 0) {
           console.log(`[AUTO_QUIZ] Found ${existingQuestions.length} existing questions for module ${moduleId}`);
           console.log(`[AUTO_QUIZ] forceRegenerate: ${forceRegenerate}, archiveOld: ${archiveOld}`);
           
-          // Always archive existing questions when generating new ones (regardless of flags)
-          console.log(`[AUTO_QUIZ] Deleting all ${existingQuestions.length} existing questions for module ${moduleId}`);
+          console.log(`[AUTO_QUIZ] IMPORTANT: Deleting all ${existingQuestions.length} existing questions for module ${moduleId}`);
           
           try {
-            // Delete questions one by one with explicit logging
-            for (const question of existingQuestions) {
-              console.log(`[AUTO_QUIZ] Deleting question ID: ${question.id}`);
-              await storage.deleteQuizQuestion(question.id);
-            }
+            // Skip individual deletion which can be unreliable and use direct database query
+            console.log(`[AUTO_QUIZ] Using direct database query to delete all questions for module ${moduleId}`);
+            await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.moduleId, moduleId));
             
-            // Verify questions were deleted
-            const remainingQuestions = await storage.getQuizQuestions(moduleId);
-            console.log(`[AUTO_QUIZ] After deletion: ${remainingQuestions.length} questions remain`);
+            // Verify deletion worked
+            const verifyDeletion = await storage.getQuizQuestions(moduleId);
+            console.log(`[AUTO_QUIZ] After deletion: ${verifyDeletion.length} questions remain`);
             
-            if (remainingQuestions.length > 0) {
-              console.log(`[AUTO_QUIZ] Warning: Not all questions were deleted. Forcing deletion with direct query.`);
-              // Force deletion with direct query if needed
-              await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.moduleId, moduleId));
+            if (verifyDeletion.length > 0) {
+              console.error(`[AUTO_QUIZ] CRITICAL ERROR: Failed to delete all questions for module ${moduleId}`);
+              // Try again with a different approach
+              await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
               
               // Final verification
-              const finalCheckQuestions = await storage.getQuizQuestions(moduleId);
-              console.log(`[AUTO_QUIZ] Final check: ${finalCheckQuestions.length} questions remain`);
+              const finalCheck = await storage.getQuizQuestions(moduleId);
+              console.log(`[AUTO_QUIZ] Final check after raw SQL: ${finalCheck.length} questions remain`);
+            } else {
+              console.log(`[AUTO_QUIZ] Successfully deleted all old questions`);
             }
-            
-            console.log(`[AUTO_QUIZ] Successfully archived old questions`);
-          } catch (archiveError) {
-            console.error(`[AUTO_QUIZ] Error archiving old questions:`, archiveError);
-            // Continue with generation even if archiving fails
+          } catch (deleteError) {
+            console.error(`[AUTO_QUIZ] Error deleting old questions:`, deleteError);
+            // Try one more method in case of error
+            try {
+              await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
+              console.log(`[AUTO_QUIZ] Attempted emergency raw SQL delete after error`);
+            } catch (emergencyError) {
+              console.error(`[AUTO_QUIZ] Emergency deletion also failed:`, emergencyError);
+            }
           }
         }
         
