@@ -19,12 +19,18 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
   const generateQuizMutation = useMutation({
     mutationFn: async () => {
       console.log(`Generating new quiz for module ${moduleId}, archiving old questions`);
+      // Generate a unique request ID to ensure the server treats this as a completely new request
+      const uniqueId = Math.random().toString(36).substring(2, 15);
+      console.log(`Generating quiz with unique request ID: ${uniqueId}`);
+      
       const res = await apiRequest('POST', '/api/llm/generate-quiz', {
         moduleId,
         courseId,
         forceRegenerate: true, // Always force regeneration of new questions
         archiveOld: true, // Signal to archive old questions
-        timestamp: new Date().getTime() // Add timestamp to prevent caching
+        timestamp: new Date().getTime(), // Add timestamp to prevent caching
+        requestId: uniqueId, // Add unique ID to ensure this is treated as a new request
+        clearExisting: true // Explicitly request clearing existing questions
       });
       return res.json();
     },

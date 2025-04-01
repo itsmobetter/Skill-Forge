@@ -273,6 +273,27 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
         return res.status(404).json({ message: "Course or module not found" });
       }
       
+      console.log(`[QUIZ_REGENERATE] User ${userId} requested quiz regeneration for module ${moduleId}`);
+      
+      // First, delete all existing questions to ensure we start fresh
+      try {
+        const existingQuestions = await storage.getQuizQuestions(moduleId);
+        console.log(`[QUIZ_REGENERATE] Found ${existingQuestions.length} existing questions to delete`);
+        
+        if (existingQuestions.length > 0) {
+          for (const question of existingQuestions) {
+            await storage.deleteQuizQuestion(question.id);
+          }
+          console.log(`[QUIZ_REGENERATE] Successfully deleted ${existingQuestions.length} questions`);
+        }
+      } catch (deleteError) {
+        console.error(`[QUIZ_REGENERATE] Error deleting existing questions:`, deleteError);
+        // Continue anyway to try to generate new questions
+      }
+      
+      // Generate a unique request ID
+      const requestId = Math.random().toString(36).substring(2, 15);
+      
       // Make an internal request to the LLM service to generate new quiz questions
       // This reuses the existing endpoint but forces regeneration
       const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/llm/generate-quiz`, {
@@ -286,7 +307,10 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           moduleId,
           count: 5,  // Default to 5 questions
           internal: true,
-          forceRegenerate: true  // Signal that this is a regeneration request
+          forceRegenerate: true,  // Signal that this is a regeneration request
+          archiveOld: true,       // Explicit signal to archive old questions
+          requestId: requestId,   // Add unique ID to ensure this is treated as a new request
+          timestamp: Date.now()   // Add timestamp to prevent caching
         })
       });
       

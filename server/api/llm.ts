@@ -4,6 +4,9 @@ import { insertQuizQuestionSchema, ModuleTranscription } from "@shared/schema";
 import { z } from "zod";
 import { createGeminiService } from "../gemini";
 import { nanoid } from "nanoid";
+import { eq } from "drizzle-orm";
+import * as schema from "@shared/schema";
+import { db } from "../db";
 
 interface QuizQuestion {
   text: string;
@@ -416,13 +419,34 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         const archiveOld = req.body.archiveOld === true || forceRegenerate === true;
         
         // If we have existing questions and need to regenerate, archive them first
-        if (existingQuestions.length > 0 && archiveOld) {
-          console.log(`[AUTO_QUIZ] Archiving ${existingQuestions.length} existing questions for module ${moduleId}`);
+        if (existingQuestions.length > 0) {
+          console.log(`[AUTO_QUIZ] Found ${existingQuestions.length} existing questions for module ${moduleId}`);
+          console.log(`[AUTO_QUIZ] forceRegenerate: ${forceRegenerate}, archiveOld: ${archiveOld}`);
+          
+          // Always archive existing questions when generating new ones (regardless of flags)
+          console.log(`[AUTO_QUIZ] Deleting all ${existingQuestions.length} existing questions for module ${moduleId}`);
+          
           try {
-            // Delete all existing questions for this module
-            await Promise.all(existingQuestions.map(q => 
-              storage.deleteQuizQuestion(q.id)
-            ));
+            // Delete questions one by one with explicit logging
+            for (const question of existingQuestions) {
+              console.log(`[AUTO_QUIZ] Deleting question ID: ${question.id}`);
+              await storage.deleteQuizQuestion(question.id);
+            }
+            
+            // Verify questions were deleted
+            const remainingQuestions = await storage.getQuizQuestions(moduleId);
+            console.log(`[AUTO_QUIZ] After deletion: ${remainingQuestions.length} questions remain`);
+            
+            if (remainingQuestions.length > 0) {
+              console.log(`[AUTO_QUIZ] Warning: Not all questions were deleted. Forcing deletion with direct query.`);
+              // Force deletion with direct query if needed
+              await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.moduleId, moduleId));
+              
+              // Final verification
+              const finalCheckQuestions = await storage.getQuizQuestions(moduleId);
+              console.log(`[AUTO_QUIZ] Final check: ${finalCheckQuestions.length} questions remain`);
+            }
+            
             console.log(`[AUTO_QUIZ] Successfully archived old questions`);
           } catch (archiveError) {
             console.error(`[AUTO_QUIZ] Error archiving old questions:`, archiveError);
