@@ -152,7 +152,18 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
           
           // Check if all modules are completed
           const completedModules = await storage.getCompletedModules(userId, courseId);
-          if (completedModules.length === modules.length) {
+          
+          // Only consider modules that have quizzes
+          const modulesWithQuiz = modules.filter(m => m.hasQuiz);
+          const allRequiredModulesCompleted = 
+            // If no modules have quizzes, just check all modules are completed
+            (modulesWithQuiz.length === 0 && completedModules.length === modules.length) ||
+            // Otherwise check all modules with quizzes are completed
+            (modulesWithQuiz.length > 0 && 
+             modulesWithQuiz.every(m => completedModules.some(cm => cm.moduleId === m.id)));
+          
+          if (allRequiredModulesCompleted) {
+            console.log(`Marking course ${courseId} as completed for user ${userId}`);
             await storage.updateUserCourseProgress(userProgress.id, {
               completed: true
             });

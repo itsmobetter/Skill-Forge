@@ -1,20 +1,77 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface GenerateQuizButtonProps {
   moduleId: string;
   courseId: string;
-  hasTranscript: boolean;
   isAdmin: boolean;
 }
 
-export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin }: GenerateQuizButtonProps) {
+export function GenerateQuizButton({ moduleId, courseId, isAdmin }: GenerateQuizButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isTranscriptGenerating, setIsTranscriptGenerating] = useState(false);
   const { toast } = useToast();
+
+  // Check if transcript exists
+  const { data: transcriptionData, isLoading: isTranscriptLoading } = useQuery({
+    queryKey: [`/api/modules/${moduleId}/transcription`],
+    queryFn: async () => {
+      try {
+        const transcriptRes = await fetch(`/api/modules/${moduleId}/transcription`);
+        if (!transcriptRes.ok) {
+          return null;
+        }
+        return transcriptRes.json();
+      } catch (error) {
+        console.error('Error fetching transcript:', error);
+        return null;
+      }
+    },
+    refetchInterval: transcriptionData => {
+      // Refetch every 5 seconds if transcript is being generated
+      return !transcriptionData && isTranscriptGenerating ? 5000 : false;
+    }
+  });
+
+  // Check for and start transcript generation if needed
+  useEffect(() => {
+    const checkAndGenerateTranscript = async () => {
+      // If transcript is loading or already exists, don't continue
+      if (isTranscriptLoading || transcriptionData) return;
+      
+      // No transcript found, get module info to check for video URL
+      try {
+        const moduleRes = await apiRequest('GET', `/api/courses/${courseId}/modules/${moduleId}`);
+        const moduleData = await moduleRes.json();
+        
+        if (moduleData && moduleData.videoUrl) {
+          setIsTranscriptGenerating(true);
+          
+          // Generate transcript
+          await apiRequest('POST', '/api/llm/transcribe', {
+            videoUrl: moduleData.videoUrl,
+            moduleId: moduleId
+          });
+          
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: [`/api/modules/${moduleId}/transcription`] });
+          queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'modules', moduleId] });
+          
+          setIsTranscriptGenerating(false);
+        }
+      } catch (error) {
+        console.error('Error generating transcript:', error);
+        setIsTranscriptGenerating(false);
+      }
+    };
+    
+    checkAndGenerateTranscript();
+  }, [moduleId, courseId, isTranscriptLoading, transcriptionData]);
 
   const generateQuizMutation = useMutation({
     mutationFn: async () => {
@@ -157,10 +214,21 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
   });
 
   const handleGenerateQuiz = async () => {
-    if (!hasTranscript) {
+    // If transcript is still being generated, show a message
+    if (isTranscriptGenerating) {
+      toast({
+        title: 'Transcript Generation in Progress',
+        description: 'Please wait while the transcript is being generated...',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // If no transcript exists yet, inform the user
+    if (!transcriptionData) {
       toast({
         title: 'Transcript Required',
-        description: 'A transcript is required to generate quiz questions. Please add a video with a transcript first.',
+        description: 'A transcript is required and is being generated. Please try again in a moment.',
         variant: 'destructive',
       });
       return;
@@ -185,6 +253,18 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
     }
   };
 
+  // Determine button text based on context
+  const getButtonText = () => {
+    if (isGenerating) {
+      return 'Quiz is Generating...';
+    } else if (isTranscriptGenerating) {
+      return 'Preparing Quiz...';
+    }
+    
+    // Check if module has a quiz already
+    return 'Generate Quiz';
+  };
+
   // Allow all users to generate quizzes
   const buttonVariant = isAdmin ? "outline" : "secondary";
 
@@ -192,16 +272,16 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
     <Button
       variant={buttonVariant}
       onClick={handleGenerateQuiz}
-      disabled={isGenerating || !hasTranscript}
+      disabled={isGenerating || isTranscriptGenerating}
       className="mt-4"
     >
-      {isGenerating ? (
+      {(isGenerating || isTranscriptGenerating) ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Quiz is Generating...
+          {getButtonText()}
         </>
       ) : (
-        'Generate Quiz'
+        getButtonText()
       )}
     </Button>
   );
