@@ -31,27 +31,7 @@ export default function ModuleDetailPage() {
     queryFn: async () => {
       if (!courseId || !moduleId) return null;
       const res = await apiRequest('GET', `/api/courses/${courseId}/modules/${moduleId}`);
-      const moduleData = await res.json();
-      
-      // Automatically generate transcript if video URL exists and no transcript exists yet
-      if (moduleData && moduleData.videoUrl) {
-        try {
-          // Check if transcript exists
-          const transcriptRes = await fetch(`/api/modules/${moduleId}/transcription`);
-          if (!transcriptRes.ok) {
-            console.log('No transcript found, automatically generating...');
-            // Generate transcript in the background
-            apiRequest('POST', '/api/llm/transcribe', {
-              videoUrl: moduleData.videoUrl,
-              moduleId: moduleId
-            }).catch(err => console.error('Auto transcript generation error:', err));
-          }
-        } catch (error) {
-          console.error('Error checking transcript:', error);
-        }
-      }
-      
-      return moduleData;
+      return res.json();
     },
     enabled: !!courseId && !!moduleId
   });
