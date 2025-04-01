@@ -21,7 +21,8 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
       const res = await apiRequest('POST', '/api/llm/generate-quiz', {
         moduleId,
         courseId,
-        forceRegenerate: true, // Set to true to regenerate every time
+        forceRegenerate: true, // Always force regeneration of new questions
+        archiveOld: true, // Signal to archive old questions
       });
       return res.json();
     },

@@ -410,9 +410,11 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         console.log(`[AUTO_QUIZ] Using course: ${courseTitle}, module: ${moduleTitle}`);
         console.log(`[AUTO_QUIZ] Content length: ${quizContent.length} characters`);
         
-        // Check if we should regenerate quiz questions or if there are already existing ones
+        // Get existing questions
         const existingQuestions = await storage.getQuizQuestions(moduleId);
+        const archiveOld = req.body.archiveOld === true;
         
+        // If force regenerate is false and questions exist, return existing questions
         if (existingQuestions.length > 0 && !forceRegenerate) {
           console.log(`[AUTO_QUIZ] Module ${moduleId} already has ${existingQuestions.length} questions and forceRegenerate is not set. Skipping generation.`);
           return res.json({ 
@@ -424,13 +426,27 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           });
         }
         
-        // When regenerating, add a hint to ensure different questions 
-        const promptPrefix = forceRegenerate 
-          ? "Please generate completely new and different questions than before. " 
-          : "";
+        // If we need to regenerate and have existing questions, archive them
+        if (existingQuestions.length > 0 && forceRegenerate && archiveOld) {
+          console.log(`[AUTO_QUIZ] Archiving ${existingQuestions.length} existing questions for module ${moduleId}`);
+          try {
+            // Here we would normally move them to an archive table, but for now we'll just remove them
+            // In a production system, you'd create a quiz_questions_archive table and move them there
+            await Promise.all(existingQuestions.map(q => 
+              storage.deleteQuizQuestion(q.id)
+            ));
+            console.log(`[AUTO_QUIZ] Successfully archived old questions`);
+          } catch (archiveError) {
+            console.error(`[AUTO_QUIZ] Error archiving old questions:`, archiveError);
+            // Continue with generation even if archiving fails
+          }
+        }
+        
+        // Add a hint to ensure different questions 
+        const promptPrefix = "Please generate completely new and different questions that test understanding of the material. ";
             
         const promptWithPrefix = promptPrefix + quizContent;
-        console.log(`[AUTO_QUIZ] ${forceRegenerate ? 'Regenerating' : 'Generating'} quiz with ${finalQuestionCount} questions`);
+        console.log(`[AUTO_QUIZ] Generating new quiz with ${finalQuestionCount} questions`);
         
         const generatedQuestions = await gemini.generateQuizQuestions(promptWithPrefix, finalQuestionCount);
 

@@ -85,6 +85,7 @@ export interface IStorage {
   createQuizQuestion(question: InsertQuizQuestion): Promise<QuizQuestion>;
   getQuizResults(userId: number, moduleId: string): Promise<QuizResult[]>;
   createQuizResult(result: InsertQuizResult): Promise<QuizResult>;
+  deleteQuizQuestion(questionId: string): Promise<void>; // Added method
 
   // Transcriptions
   getModuleTranscription(moduleId: string): Promise<ModuleTranscription | undefined>;
@@ -94,7 +95,7 @@ export interface IStorage {
   // Chat interactions
   getChatInteractions(userId: number, courseId: string): Promise<ChatInteraction[]>;
   createChatInteraction(interaction: InsertChatInteraction): Promise<ChatInteraction>;
-  
+
   // Certificate management
   getUserCertificates(userId: number): Promise<Certificate[]>;
   getCertificatesByCourse(courseId: string): Promise<Certificate[]>;
@@ -116,9 +117,9 @@ export class MemStorage implements IStorage {
   private quizResults: Map<number, QuizResult>;
   private moduleTranscriptions: Map<string, ModuleTranscription>;
   private chatInteractions: Map<number, ChatInteraction>;
-  
+
   sessionStore: any;
-  
+
   private userIdCounter: number;
   private userProfileIdCounter: number;
   private apiConfigIdCounter: number;
@@ -167,7 +168,7 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    
+
     // Ensure all fields have proper types to match the schema
     const user: User = { 
       id,
@@ -176,7 +177,7 @@ export class MemStorage implements IStorage {
       email: insertUser.email ?? null,
       isAdmin: insertUser.isAdmin ?? false
     };
-    
+
     this.users.set(id, user);
     return user;
   }
@@ -203,13 +204,13 @@ export class MemStorage implements IStorage {
     this.users.set(userId, user);
     return true;
   }
-  
+
   async updateUserAdminStatus(userId: number, isAdmin: boolean): Promise<boolean> {
     const user = await this.getUser(userId);
     if (!user) {
       return false;
     }
-    
+
     // Update admin status
     user.isAdmin = isAdmin;
     this.users.set(userId, user);
@@ -219,24 +220,24 @@ export class MemStorage implements IStorage {
   // User profile
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
     console.log(`[MemStorage] Fetching profile for user ID: ${userId}`);
-    
+
     // Use a strict equality check (===) to ensure we only get the profile for the exact user
     // This is crucial to prevent data leakage between accounts
     const profile = Array.from(this.userProfiles.values()).find(
       (profile) => profile.userId === userId // Using strict equality
     );
-    
+
     console.log(`[MemStorage] Profile found: ${profile ? 'yes' : 'no'}`);
     if (profile) {
       console.log(`[MemStorage] Profile ID: ${profile.id}, User ID: ${profile.userId}`);
     }
-    
+
     return profile;
   }
 
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
     const id = this.userProfileIdCounter++;
-    
+
     // Ensure all fields use null instead of undefined to match the database schema
     const userProfile: UserProfile = { 
       id, 
@@ -249,7 +250,7 @@ export class MemStorage implements IStorage {
       about: profile.about ?? null,
       avatarUrl: profile.avatarUrl ?? null
     };
-    
+
     console.log(`[MemStorage] Creating new profile for user ID: ${profile.userId}, profile ID: ${id}`);
     this.userProfiles.set(id, userProfile);
     return userProfile;
@@ -257,13 +258,13 @@ export class MemStorage implements IStorage {
 
   async updateUserProfile(userId: number, profileUpdate: Partial<UserProfile>): Promise<UserProfile> {
     console.log(`[MemStorage] Updating profile for user ID: ${userId}`);
-    
+
     const profile = await this.getUserProfile(userId);
     if (!profile) {
       console.log(`[MemStorage] No profile found for user ID: ${userId}, cannot update`);
       throw new Error("Profile not found");
     }
-    
+
     // Convert any undefined values to null for consistency
     const normalizedUpdate: Partial<UserProfile> = {};
     if ('firstName' in profileUpdate) normalizedUpdate.firstName = profileUpdate.firstName ?? null;
@@ -273,7 +274,7 @@ export class MemStorage implements IStorage {
     if ('department' in profileUpdate) normalizedUpdate.department = profileUpdate.department ?? null;
     if ('about' in profileUpdate) normalizedUpdate.about = profileUpdate.about ?? null;
     if ('avatarUrl' in profileUpdate) normalizedUpdate.avatarUrl = profileUpdate.avatarUrl ?? null;
-    
+
     console.log(`[MemStorage] Updating profile ID: ${profile.id} with normalized values`);
     const updatedProfile = { ...profile, ...normalizedUpdate };
     this.userProfiles.set(profile.id, updatedProfile);
@@ -341,52 +342,52 @@ export class MemStorage implements IStorage {
   async deleteCourse(id: string): Promise<void> {
     const course = this.courses.get(id);
     if (!course) return;
-    
+
     // Soft delete the course
     course.deleted = true;
     course.deletedAt = new Date();
     this.courses.set(id, course);
   }
-  
+
   async hardDeleteCourse(id: string): Promise<void> {
     this.courses.delete(id);
-    
+
     // Cascade delete related entities
     const modulesToDelete = Array.from(this.modules.values())
       .filter(module => module.courseId === id);
-      
+
     for (const module of modulesToDelete) {
       await this.deleteModule(module.id);
     }
-    
+
     // Delete materials
     const materialsToDelete = Array.from(this.materials.values())
       .filter(material => material.courseId === id);
-      
+
     for (const material of materialsToDelete) {
       this.materials.delete(material.id);
     }
-    
+
     // Delete progress records
     const progressToDelete = Array.from(this.userCourseProgress.values())
       .filter(progress => progress.courseId === id);
-      
+
     for (const progress of progressToDelete) {
       this.userCourseProgress.delete(progress.id);
     }
   }
-  
+
   async recoverCourse(id: string): Promise<Course | undefined> {
     const course = this.courses.get(id);
     if (!course || !course.deleted) {
       return undefined;
     }
-    
+
     // Recover the course
     course.deleted = false;
     course.deletedAt = null;
     this.courses.set(id, course);
-    
+
     return course;
   }
 
@@ -421,23 +422,23 @@ export class MemStorage implements IStorage {
 
   async deleteModule(id: string): Promise<void> {
     this.modules.delete(id);
-    
+
     // Delete related quiz questions
     const questionsToDelete = Array.from(this.quizQuestions.values())
       .filter(question => question.moduleId === id);
-      
+
     for (const question of questionsToDelete) {
       this.quizQuestions.delete(question.id);
     }
-    
+
     // Delete related transcriptions
     const transcriptionToDelete = Array.from(this.moduleTranscriptions.values())
       .find(transcription => transcription.moduleId === id);
-      
+
     if (transcriptionToDelete) {
       this.moduleTranscriptions.delete(transcriptionToDelete.moduleId);
     }
-    
+
     // Delete module completions
     for (const [key, completion] of this.moduleCompletions.entries()) {
       if (completion.moduleId === id) {
@@ -485,35 +486,35 @@ export class MemStorage implements IStorage {
   })[]> {
     const progressRecords = Array.from(this.userCourseProgress.values())
       .filter(progress => progress.userId === userId);
-      
+
     return Promise.all(progressRecords.map(async (progress) => {
       const course = await this.getCourse(progress.courseId);
       if (!course) {
         throw new Error("Course not found");
       }
-      
+
       // Get all modules for this course
       const modules = Array.from(this.modules.values())
         .filter(module => module.courseId === progress.courseId);
-      
+
       // Get quiz results for all modules in this course
       const moduleIds = modules.filter(m => m.hasQuiz).map(m => m.id);
       let bestScore = 0;
       let anyPassed = false;
-      
+
       if (moduleIds.length > 0) {
         const quizResults = Array.from(this.quizResults.values())
           .filter(result => 
             result.userId === userId && 
             moduleIds.includes(result.moduleId)
           );
-          
+
         if (quizResults.length > 0) {
           bestScore = Math.max(...quizResults.map(result => result.score));
           anyPassed = quizResults.some(result => result.passed);
         }
       }
-      
+
       return {
         ...course,
         progress: progress.progress,
@@ -559,21 +560,21 @@ export class MemStorage implements IStorage {
   async getCompletedModules(userId: number, courseId: string): Promise<ModuleCompletion[]> {
     const modules = await this.getCourseModules(courseId);
     const completions: ModuleCompletion[] = [];
-    
+
     for (const module of modules) {
       const completion = await this.getModuleCompletion(userId, module.id);
       if (completion && completion.completed) {
         completions.push(completion);
       }
     }
-    
+
     return completions;
   }
 
   async updateModuleCompletion(userId: number, moduleId: string, completed: boolean): Promise<ModuleCompletion> {
     const key = `${userId}-${moduleId}`;
     let completion = this.moduleCompletions.get(key);
-    
+
     if (completion) {
       // Update existing completion
       completion = { 
@@ -591,7 +592,7 @@ export class MemStorage implements IStorage {
         completedAt: completed ? new Date() : null
       };
     }
-    
+
     console.log(`[MemStorage] ${completion.completed ? 'Completed' : 'Uncompleted'} module ${moduleId} for user ${userId}`);
     this.moduleCompletions.set(key, completion);
     return completion;
@@ -626,6 +627,10 @@ export class MemStorage implements IStorage {
     return newResult;
   }
 
+  async deleteQuizQuestion(questionId: string): Promise<void> {
+    this.quizQuestions.delete(questionId);
+  }
+
   // Transcriptions
   async getModuleTranscription(moduleId: string): Promise<ModuleTranscription | undefined> {
     return Array.from(this.moduleTranscriptions.values())
@@ -642,7 +647,7 @@ export class MemStorage implements IStorage {
   async updateModuleTranscription(id: number, transcriptionUpdate: Partial<ModuleTranscription>): Promise<ModuleTranscription> {
     const transcription = Array.from(this.moduleTranscriptions.values())
       .find(t => t.id === id);
-      
+
     if (!transcription) {
       throw new Error("Transcription not found");
     }
@@ -732,7 +737,7 @@ export class DatabaseStorage implements IStorage {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL not set");
     }
-    
+
     this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
     this.sessionStore = new PostgresSessionStore({
       pool: this.pool,
@@ -749,7 +754,7 @@ export class DatabaseStorage implements IStorage {
           .from(schema.users)
           .where(eq(schema.users.id, id))
           .limit(1);
-          
+
         return user;
       },
       `Failed to get user with ID ${id}`
@@ -759,7 +764,7 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     // Cache optimization: Create a cache key based on username
     const cacheKey = `user_by_username_${username.toLowerCase()}`;
-    
+
     return executeQuery(
       async () => {
         // Simplified query - just do case-insensitive search
@@ -767,7 +772,7 @@ export class DatabaseStorage implements IStorage {
           .from(schema.users)
           .where(sql`LOWER(${schema.users.username}) = LOWER(${username})`)
           .limit(1);
-          
+
         return user;
       },
       `Failed to get user with username ${username}`
@@ -791,24 +796,24 @@ export class DatabaseStorage implements IStorage {
 
     // Note: In a real app, password verification should be done here or in auth.ts
     // This is simplified for the demo
-    
+
     await db.update(schema.users)
       .set({ password: newPassword })
       .where(eq(schema.users.id, userId));
-    
+
     return true;
   }
-  
+
   async updateUserAdminStatus(userId: number, isAdmin: boolean): Promise<boolean> {
     const user = await this.getUser(userId);
     if (!user) {
       return false;
     }
-    
+
     await db.update(schema.users)
       .set({ isAdmin: isAdmin })
       .where(eq(schema.users.id, userId));
-    
+
     return true;
   }
 
@@ -816,19 +821,19 @@ export class DatabaseStorage implements IStorage {
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
     try {
       console.log(`[DatabaseStorage] Fetching profile for user ID: ${userId}`);
-      
+
       // Use a strict equality check on userId to ensure we only get the profile for the exact user
       // This prevents potential data leakage between accounts
       const [profile] = await db.select()
         .from(schema.userProfiles)
         .where(eq(schema.userProfiles.userId, userId))
         .limit(1);
-      
+
       console.log(`[DatabaseStorage] Profile found: ${profile ? 'yes' : 'no'}`);
       if (profile) {
         console.log(`[DatabaseStorage] Profile ID: ${profile.id}, User ID: ${profile.userId}`);
       }
-      
+
       return profile;
     } catch (error) {
       console.error(`[DatabaseStorage] Error fetching user profile for userId ${userId}:`, error);
@@ -839,14 +844,14 @@ export class DatabaseStorage implements IStorage {
   async createUserProfile(profile: InsertUserProfile): Promise<UserProfile> {
     try {
       console.log(`[DatabaseStorage] Creating new profile for user ID: ${profile.userId}`);
-      
+
       // First check if a profile already exists for this user to avoid duplicates
       const existingProfile = await this.getUserProfile(profile.userId);
       if (existingProfile) {
         console.log(`[DatabaseStorage] Profile already exists for user ID: ${profile.userId}, returning existing profile`);
         return existingProfile;
       }
-      
+
       // Ensure all fields use null instead of undefined to match the database schema
       const profileWithNulls = {
         userId: profile.userId,
@@ -858,7 +863,7 @@ export class DatabaseStorage implements IStorage {
         about: profile.about ?? null,
         avatarUrl: profile.avatarUrl ?? null
       };
-      
+
       const [userProfile] = await db.insert(schema.userProfiles).values(profileWithNulls).returning();
       console.log(`[DatabaseStorage] Profile created with ID: ${userProfile.id}`);
       return userProfile;
@@ -871,18 +876,17 @@ export class DatabaseStorage implements IStorage {
   async updateUserProfile(userId: number, profileUpdate: Partial<UserProfile>): Promise<UserProfile> {
     try {
       console.log(`[DatabaseStorage] Updating profile for user ID: ${userId}`);
-      
+
       // First get the existing profile with a strict equality check on userId
       const [existingProfile] = await db.select()
         .from(schema.userProfiles)
         .where(eq(schema.userProfiles.userId, userId))
         .limit(1);
-        
+
       if (!existingProfile) {
         console.log(`[DatabaseStorage] No profile found for user ID: ${userId}, cannot update`);
-        throw new Error("Profile not found");
-      }
-      
+        throw new Error("Profile not found");}
+
       // Convert any undefined values to null for consistency
       const normalizedUpdate: Partial<UserProfile> = {};
       if ('firstName' in profileUpdate) normalizedUpdate.firstName = profileUpdate.firstName ?? null;
@@ -892,7 +896,7 @@ export class DatabaseStorage implements IStorage {
       if ('department' in profileUpdate) normalizedUpdate.department = profileUpdate.department ?? null;
       if ('about' in profileUpdate) normalizedUpdate.about = profileUpdate.about ?? null;
       if ('avatarUrl' in profileUpdate) normalizedUpdate.avatarUrl = profileUpdate.avatarUrl ?? null;
-      
+
       console.log(`[DatabaseStorage] Updating profile ID: ${existingProfile.id} with normalized values`);
 
       // Update only the profile for the exact user
@@ -900,7 +904,7 @@ export class DatabaseStorage implements IStorage {
         .set(normalizedUpdate)
         .where(eq(schema.userProfiles.userId, userId))
         .returning();
-      
+
       return updatedProfile;
     } catch (error) {
       console.error(`[DatabaseStorage] Error updating user profile for userId ${userId}:`, error);
@@ -927,7 +931,7 @@ export class DatabaseStorage implements IStorage {
           ...config,
           temperature: Number(config.temperature) // Explicitly convert to number
         };
-        
+
         const [apiConfig] = await db.insert(schema.apiConfigs).values(configWithCorrectTypes).returning();
         return apiConfig;
       },
@@ -953,7 +957,7 @@ export class DatabaseStorage implements IStorage {
           .set(updatedConfig)
           .where(eq(schema.apiConfigs.userId, userId))
           .returning();
-        
+
         return result;
       },
       `Failed to update API configuration for user ${userId}`
@@ -1010,7 +1014,7 @@ export class DatabaseStorage implements IStorage {
       .set(courseUpdate)
       .where(eq(courses.id, id))
       .returning();
-    
+
     return updatedCourse;
   }
 
@@ -1023,35 +1027,35 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(courses.id, id));
   }
-  
+
   async hardDeleteCourse(id: string): Promise<void> {
     // Hard delete - permanently remove the course and all related data
     // We should ideally perform this in a transaction
     await db.delete(userCourseProgress).where(eq(userCourseProgress.courseId, id));
     await db.delete(materials).where(eq(materials.courseId, id));
-    
+
     // Get modules to delete
     const modulesToDelete = await db.select().from(modules).where(eq(modules.courseId, id));
-    
+
     for (const module of modulesToDelete) {
       await db.delete(quizQuestions).where(eq(quizQuestions.moduleId, module.id));
       await db.delete(moduleTranscriptions).where(eq(moduleTranscriptions.moduleId, module.id));
       await db.delete(moduleCompletions).where(eq(moduleCompletions.moduleId, module.id));
       await db.delete(quizResults).where(eq(quizResults.moduleId, module.id));
     }
-    
+
     await db.delete(modules).where(eq(modules.courseId, id));
     await db.delete(courses).where(eq(courses.id, id));
   }
-  
+
   async recoverCourse(id: string): Promise<Course | undefined> {
     // Recover a soft-deleted course
     const [course] = await db.select().from(courses).where(eq(courses.id, id));
-    
+
     if (!course || !course.deleted) {
       return undefined;
     }
-    
+
     const [recoveredCourse] = await db.update(courses)
       .set({
         deleted: false,
@@ -1059,7 +1063,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(courses.id, id))
       .returning();
-      
+
     return recoveredCourse;
   }
 
@@ -1108,7 +1112,7 @@ export class DatabaseStorage implements IStorage {
           .set(moduleUpdate)
           .where(eq(schema.modules.id, id))
           .returning();
-        
+
         return updatedModule;
       },
       `Failed to update module ${id}`
@@ -1167,7 +1171,7 @@ export class DatabaseStorage implements IStorage {
           .set(materialUpdate)
           .where(eq(schema.materials.id, id))
           .returning();
-        
+
         return updatedMaterial;
       },
       `Failed to update material ${id}`
@@ -1195,45 +1199,45 @@ export class DatabaseStorage implements IStorage {
     return executeQuery(
       async () => {
         console.log(`[USER_COURSES] Fetching courses for user ID: ${userId}`);
-        
+
         // First find all user course progress records
         const userProgressRecords = await db.select()
           .from(schema.userCourseProgress)
           .where(eq(schema.userCourseProgress.userId, userId));
-        
+
         console.log(`[USER_COURSES] Found ${userProgressRecords.length} course enrollments`);
-        
+
         if (userProgressRecords.length === 0) {
           return [];
         }
-        
+
         // Get course details for each enrolled course
         const result = [];
-        
+
         for (const progress of userProgressRecords) {
           try {
             // Get course details
             const [course] = await db.select()
               .from(schema.courses)
               .where(eq(schema.courses.id, progress.courseId));
-              
+
             if (!course) {
               console.log(`[USER_COURSES] Course not found for progress record: ${progress.id}`);
               continue;
             }
-            
+
             // Get module count and info
             const modules = await db.select()
               .from(schema.modules)
               .where(eq(schema.modules.courseId, progress.courseId));
-              
+
             // Calculate quiz performance across all modules in the course
             let bestScore = 0;
             let anyPassed = false;
-            
+
             // Get all modules with quizzes
             const moduleIds = modules.filter(m => m.hasQuiz).map(m => m.id);
-            
+
             if (moduleIds.length > 0) {
               // Get all quiz results for this user across all modules in the course
               const quizResults = await db
@@ -1245,14 +1249,14 @@ export class DatabaseStorage implements IStorage {
                     sql`${schema.quizResults.moduleId} IN (${moduleIds.join(',')})`
                   )
                 );
-                
+
               // Calculate best score and passed status
               if (quizResults.length > 0) {
                 bestScore = Math.max(...quizResults.map(result => result.score));
                 anyPassed = quizResults.some(result => result.passed);
               }
             }
-            
+
             // Add to result with additional fields
             result.push({
               ...course,
@@ -1267,7 +1271,7 @@ export class DatabaseStorage implements IStorage {
             console.error(`[USER_COURSES] Error fetching details for course ${progress.courseId}:`, err);
           }
         }
-        
+
         console.log(`[USER_COURSES] Returning ${result.length} courses`);
         return result;
       },
@@ -1283,7 +1287,7 @@ export class DatabaseStorage implements IStorage {
             eq(schema.userCourseProgress.userId, userId),
             eq(schema.userCourseProgress.courseId, courseId)
           ));
-        
+
         return progress;
       },
       `Failed to get user course progress for user ${userId} and course ${courseId}`
@@ -1296,7 +1300,7 @@ export class DatabaseStorage implements IStorage {
         const [newProgress] = await db.insert(schema.userCourseProgress)
           .values(progress)
           .returning();
-        
+
         return newProgress;
       },
       `Failed to create user course progress for user ${progress.userId} and course ${progress.courseId}`
@@ -1308,7 +1312,7 @@ export class DatabaseStorage implements IStorage {
       async () => {
         const [existingProgress] = await db.select().from(schema.userCourseProgress)
           .where(eq(schema.userCourseProgress.id, id));
-          
+
         if (!existingProgress) {
           throw new Error("Progress record not found");
         }
@@ -1317,7 +1321,7 @@ export class DatabaseStorage implements IStorage {
           .set(progressUpdate)
           .where(eq(schema.userCourseProgress.id, id))
           .returning();
-        
+
         return updatedProgress;
       },
       `Failed to update user course progress for id ${id}`
@@ -1333,7 +1337,7 @@ export class DatabaseStorage implements IStorage {
             eq(schema.moduleCompletions.userId, userId),
             eq(schema.moduleCompletions.moduleId, moduleId)
           ));
-        
+
         return completion;
       },
       `Failed to get module completion for user ${userId} and module ${moduleId}`
@@ -1345,13 +1349,13 @@ export class DatabaseStorage implements IStorage {
       async () => {
         const courseModules = await this.getCourseModules(courseId);
         const moduleIds = courseModules.map(module => module.id);
-        
+
         const completions = await db.select().from(schema.moduleCompletions)
           .where(and(
             eq(schema.moduleCompletions.userId, userId),
             eq(schema.moduleCompletions.completed, true)
           ));
-        
+
         return completions.filter(completion => moduleIds.includes(completion.moduleId));
       },
       `Failed to get completed modules for user ${userId} and course ${courseId}`
@@ -1362,7 +1366,7 @@ export class DatabaseStorage implements IStorage {
     return executeQuery(
       async () => {
         const existingCompletion = await this.getModuleCompletion(userId, moduleId);
-        
+
         if (existingCompletion) {
           // Update existing completion
           const [updatedCompletion] = await db.update(schema.moduleCompletions)
@@ -1375,7 +1379,7 @@ export class DatabaseStorage implements IStorage {
               eq(schema.moduleCompletions.moduleId, moduleId)
             ))
             .returning();
-          
+
           return updatedCompletion;
         } else {
           // Create new completion
@@ -1387,7 +1391,7 @@ export class DatabaseStorage implements IStorage {
               completedAt: completed ? new Date() : null,
             })
             .returning();
-          
+
           return newCompletion;
         }
       },
@@ -1413,7 +1417,7 @@ export class DatabaseStorage implements IStorage {
         const [newQuestion] = await db.insert(schema.quizQuestions)
           .values({...question, id})
           .returning();
-        
+
         return newQuestion;
       },
       `Failed to create quiz question for module ${question.moduleId}`
@@ -1430,7 +1434,7 @@ export class DatabaseStorage implements IStorage {
             .orderBy(desc(schema.quizResults.completedAt))
             .limit(10); // Limit to the most recent 10 results for debug purposes
         }
-        
+
         // Otherwise, filter by both userId and moduleId as before
         return await db.select().from(schema.quizResults)
           .where(and(
@@ -1448,7 +1452,7 @@ export class DatabaseStorage implements IStorage {
         const [newResult] = await db.insert(schema.quizResults)
           .values(result)
           .returning();
-        
+
         return newResult;
       },
       `Failed to create quiz result for user ${result.userId} and module ${result.moduleId}`
@@ -1464,17 +1468,17 @@ export class DatabaseStorage implements IStorage {
           const result = await db.execute(
             sql`SELECT id, module_id as "moduleId", video_id as "videoId", text FROM module_transcriptions WHERE module_id = ${moduleId}`
           );
-          
+
           if (!result || !result.rows || result.rows.length === 0) {
             return undefined;
           }
-          
+
           const transcription = result.rows[0] as any;
-          
+
           if (!transcription) {
             return undefined;
           }
-          
+
           return {
             id: transcription.id || 0,
             moduleId: transcription.moduleId || moduleId,
@@ -1505,11 +1509,11 @@ export class DatabaseStorage implements IStorage {
               RETURNING id, module_id as "moduleId", video_id as "videoId", text
             `
           );
-          
+
           if (!result || !result.rows || result.rows.length === 0) {
             throw new Error("Failed to create transcription");
           }
-          
+
           return result.rows[0] as ModuleTranscription;
         },
         `Failed to create module transcription for module ${transcription.moduleId}`
@@ -1524,15 +1528,15 @@ export class DatabaseStorage implements IStorage {
     try {
       // Only include basic fields that are guaranteed to exist in any schema version
       const safeUpdate: any = {};
-      
+
       if (transcriptionUpdate.text !== undefined) {
         safeUpdate.text = transcriptionUpdate.text;
       }
-      
+
       if (transcriptionUpdate.videoId !== undefined) {
         safeUpdate.video_id = transcriptionUpdate.videoId;
       }
-      
+
       // Use raw SQL to update to avoid schema mismatches
       return await executeQuery(
         async () => {
@@ -1540,11 +1544,11 @@ export class DatabaseStorage implements IStorage {
           const checkResult = await db.execute(
             sql`SELECT id FROM module_transcriptions WHERE id = ${id}`
           );
-          
+
           if (!checkResult || !checkResult.rows || checkResult.rows.length === 0) {
             throw new Error("Transcription not found");
           }
-          
+
           // Update using raw SQL
           const updateQuery = sql`
             UPDATE module_transcriptions 
@@ -1560,13 +1564,13 @@ export class DatabaseStorage implements IStorage {
             WHERE id = ${id}
             RETURNING id, module_id as "moduleId", video_id as "videoId", text
           `;
-          
+
           const result = await db.execute(updateQuery);
-          
+
           if (!result || !result.rows || result.rows.length === 0) {
             throw new Error("Failed to update transcription");
           }
-          
+
           return result.rows[0] as ModuleTranscription;
         },
         `Failed to update module transcription with id ${id}`
@@ -1598,7 +1602,7 @@ export class DatabaseStorage implements IStorage {
         const [newInteraction] = await db.insert(schema.chatInteractions)
           .values(interaction)
           .returning();
-        
+
         return newInteraction;
       },
       `Failed to create chat interaction for user ${interaction.userId} and course ${interaction.courseId}`
@@ -1632,7 +1636,7 @@ export class DatabaseStorage implements IStorage {
       async () => {
         const [certificate] = await db.select().from(schema.certificates)
           .where(eq(schema.certificates.id, id));
-        
+
         return certificate;
       },
       `Failed to get certificate with id ${id}`
@@ -1646,7 +1650,7 @@ export class DatabaseStorage implements IStorage {
         const [newCertificate] = await db.insert(schema.certificates)
           .values({...certificate, id})
           .returning();
-        
+
         return newCertificate;
       },
       `Failed to create certificate for user ${certificate.userId} and course ${certificate.courseId}`
@@ -1670,10 +1674,18 @@ export class DatabaseStorage implements IStorage {
           .from(schema.users)
           .where(sql`LOWER(${schema.users.email}) = LOWER(${email})`)
           .limit(1);  // Optimize by limiting to 1 result
-        
+
         return user;
       },
       `Failed to get user with email ${email}`
+    );
+  }
+  async deleteQuizQuestion(questionId: string): Promise<void> {
+    return executeQuery(
+      async () => {
+        await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.id, questionId));
+      },
+      `Failed to delete quiz question with ID ${questionId}`
     );
   }
 }
