@@ -20,7 +20,8 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/llm/generate-quiz', {
         moduleId,
-        courseId
+        courseId,
+        forceRegenerate: true, // Set to true to regenerate every time
       });
       return res.json();
     },
@@ -53,7 +54,7 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
     }
   });
 
-  const handleGenerateQuiz = () => {
+  const handleGenerateQuiz = async () => {
     if (!hasTranscript) {
       toast({
         title: 'Transcript Required',
@@ -63,12 +64,26 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
       return;
     }
 
+    // Start the loading state
     setIsGenerating(true);
-    generateQuizMutation.mutate();
+
+    // Handle the quiz generation
+    try {
+      await generateQuizMutation.mutateAsync(); // Await the mutation for better error handling
+    } catch (error) {
+      console.error("Quiz generation failed:", error);
+      toast({
+        title: 'Quiz Generation Error',
+        description: 'An error occurred during quiz generation.',
+        variant: 'destructive',
+      });
+    } finally {
+      // Stop the loading state regardless of success or failure
+      setIsGenerating(false);
+    }
   };
 
   // Allow all users to generate quizzes
-  // Only show a different button style for non-admin users
   const buttonVariant = isAdmin ? "outline" : "secondary";
 
   return (
@@ -81,7 +96,7 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
       {isGenerating ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Generating Quiz...
+          Quiz is Generating...
         </>
       ) : (
         'Generate Quiz'
