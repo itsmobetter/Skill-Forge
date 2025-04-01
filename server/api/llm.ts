@@ -412,26 +412,14 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         
         // Get existing questions
         const existingQuestions = await storage.getQuizQuestions(moduleId);
-        const archiveOld = req.body.archiveOld === true;
+        // Always archive old questions when forcing regeneration or when archiveOld is explicitly set
+        const archiveOld = req.body.archiveOld === true || forceRegenerate === true;
         
-        // If force regenerate is false and questions exist, return existing questions
-        if (existingQuestions.length > 0 && !forceRegenerate) {
-          console.log(`[AUTO_QUIZ] Module ${moduleId} already has ${existingQuestions.length} questions and forceRegenerate is not set. Skipping generation.`);
-          return res.json({ 
-            success: true,
-            questionsExisted: true,
-            questionsCount: existingQuestions.length,
-            module: { id: moduleId, title: moduleTitle },
-            course: { id: effectiveCourseId, title: courseTitle }
-          });
-        }
-        
-        // If we need to regenerate and have existing questions, archive them
-        if (existingQuestions.length > 0 && forceRegenerate && archiveOld) {
+        // If we have existing questions and need to regenerate, archive them first
+        if (existingQuestions.length > 0 && archiveOld) {
           console.log(`[AUTO_QUIZ] Archiving ${existingQuestions.length} existing questions for module ${moduleId}`);
           try {
-            // Here we would normally move them to an archive table, but for now we'll just remove them
-            // In a production system, you'd create a quiz_questions_archive table and move them there
+            // Delete all existing questions for this module
             await Promise.all(existingQuestions.map(q => 
               storage.deleteQuizQuestion(q.id)
             ));
@@ -440,6 +428,19 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
             console.error(`[AUTO_QUIZ] Error archiving old questions:`, archiveError);
             // Continue with generation even if archiving fails
           }
+        }
+        
+        // If force regenerate is false and questions exist, return existing questions
+        // This block only runs if we didn't delete the questions above
+        if (existingQuestions.length > 0 && !forceRegenerate && !archiveOld) {
+          console.log(`[AUTO_QUIZ] Module ${moduleId} already has ${existingQuestions.length} questions and forceRegenerate is not set. Skipping generation.`);
+          return res.json({ 
+            success: true,
+            questionsExisted: true,
+            questionsCount: existingQuestions.length,
+            module: { id: moduleId, title: moduleTitle },
+            course: { id: effectiveCourseId, title: courseTitle }
+          });
         }
         
         // Add a hint to ensure different questions 

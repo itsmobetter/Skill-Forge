@@ -18,11 +18,13 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
 
   const generateQuizMutation = useMutation({
     mutationFn: async () => {
+      console.log(`Generating new quiz for module ${moduleId}, archiving old questions`);
       const res = await apiRequest('POST', '/api/llm/generate-quiz', {
         moduleId,
         courseId,
         forceRegenerate: true, // Always force regeneration of new questions
         archiveOld: true, // Signal to archive old questions
+        timestamp: new Date().getTime() // Add timestamp to prevent caching
       });
       return res.json();
     },
