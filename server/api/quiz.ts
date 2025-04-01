@@ -371,6 +371,61 @@ export function setupQuizRoutes(router: Router, requireAuth: any, requireAdmin: 
       res.json(result);
     } catch (error) {
       console.error("Quiz regeneration error:", error);
+
+  // Direct database reset endpoint for quiz questions
+  router.post("/courses/:courseId/modules/:moduleId/quiz/reset-database", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const { moduleId } = req.params;
+      const timestamp = Date.now();
+      
+      console.log(`[QUIZ DB RESET ${timestamp}] User ${userId} requested direct database reset for module ${moduleId}`);
+      
+      try {
+        // First try to use the provided database functions
+        const { db, sql } = require('../db');
+        
+        // Direct SQL approach with explicit error handling
+        console.log(`[QUIZ DB RESET ${timestamp}] Executing direct DELETE SQL command`);
+        try {
+          // Execute raw DELETE SQL
+          await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
+          console.log(`[QUIZ DB RESET ${timestamp}] DELETE SQL command executed successfully`);
+          
+          // Double-check that deletion worked
+          const remainingQuestions = await storage.getQuizQuestions(moduleId);
+          console.log(`[QUIZ DB RESET ${timestamp}] After deletion: ${remainingQuestions.length} questions remain`);
+          
+          return res.json({ 
+            success: true, 
+            message: `Quiz questions deleted successfully. Remaining: ${remainingQuestions.length}`,
+            timestamp
+          });
+        } catch (sqlError) {
+          console.error(`[QUIZ DB RESET ${timestamp}] SQL error:`, sqlError);
+          return res.status(500).json({ 
+            success: false, 
+            message: "SQL error occurred during reset", 
+            error: sqlError.message
+          });
+        }
+      } catch (error) {
+        console.error(`[QUIZ DB RESET ${timestamp}] Server error:`, error);
+        return res.status(500).json({ 
+          success: false, 
+          message: "Server error during reset", 
+          error: error.message
+        });
+      }
+    } catch (error) {
+      console.error("Reset database error:", error);
+      res.status(500).json({ 
+        message: "Failed to reset quiz database", 
+        error: (error as Error).message 
+      });
+    }
+  });
+
       res.status(500).json({ message: "Failed to regenerate quiz questions", error: (error as Error).message });
     }
   });

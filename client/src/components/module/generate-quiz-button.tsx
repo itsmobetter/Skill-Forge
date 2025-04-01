@@ -27,7 +27,36 @@ export function GenerateQuizButton({ moduleId, courseId, hasTranscript, isAdmin 
       logMsg(`Starting quiz generation for module ${moduleId}`);
       logMsg(`Using unique request ID: ${uniqueId}`);
       
-      // STEP 1: First try the dedicated regeneration endpoint
+      // STEP 0: First reset the database directly to ensure old questions are removed
+      try {
+        logMsg('STEP 0: Direct database reset to remove old questions');
+        const resetUrl = `/api/courses/${courseId}/modules/${moduleId}/quiz/reset-database`;
+        
+        // Add cache-busting query parameter
+        const resetUrlWithCache = `${resetUrl}?t=${timestamp}&r=${Math.random()}`;
+        logMsg(`Calling ${resetUrlWithCache}`);
+        
+        const resetResponse = await fetch(resetUrlWithCache, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          body: JSON.stringify({
+            timestamp,
+            requestId: uniqueId
+          })
+        });
+        
+        const resetResult = await resetResponse.json();
+        logMsg(`Database reset result: ${JSON.stringify(resetResult)}`);
+      } catch (resetError) {
+        logMsg(`Error with database reset: ${resetError.message}`);
+        // Continue anyway to try other approaches
+      }
+      
+      // STEP 1: Then try the dedicated regeneration endpoint
       try {
         logMsg('STEP 1: Using dedicated regeneration endpoint');
         const regenerateUrl = `/api/courses/${courseId}/modules/${moduleId}/quiz/regenerate`;

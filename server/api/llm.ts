@@ -413,51 +413,67 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         console.log(`[AUTO_QUIZ ${Date.now()}] forceRegenerate = ${forceRegenerate}, archiveOld = ${req.body.archiveOld}`);
 
         // Always delete existing questions for this module first
+        const timestamp = Date.now();
+        console.log(`[AUTO_QUIZ ${timestamp}] Starting with fresh database operation`);
+        
+        // Use a more reliable approach to ensure questions are deleted
         try {
-          // Get existing questions
-          const existingQuestions = await storage.getQuizQuestions(moduleId);
-          console.log(`[AUTO_QUIZ ${Date.now()}] Found ${existingQuestions.length} existing questions for module ${moduleId}`);
-
-          if (existingQuestions.length > 0) {
-            console.log(`[AUTO_QUIZ ${Date.now()}] Deleting ALL ${existingQuestions.length} existing questions for module ${moduleId}`);
-
-            // Delete directly from database using raw SQL for reliability
-            if (db && db.execute) {
+          // Force direct database access to ensure we're not hitting cache issues
+          const { pool, db, sql } = require('../db');
+          
+          console.log(`[AUTO_QUIZ ${timestamp}] Getting direct database connection`);
+          
+          // First approach: Use transaction with raw SQL for maximum reliability
+          const client = await pool.connect();
+          
+          try {
+            console.log(`[AUTO_QUIZ ${timestamp}] Starting transaction`);
+            await client.query('BEGIN');
+            
+            // Use raw SQL DELETE with explicit module_id parameter
+            const deleteQuery = `DELETE FROM quiz_questions WHERE module_id = $1`;
+            const result = await client.query(deleteQuery, [moduleId]);
+            console.log(`[AUTO_QUIZ ${timestamp}] Deleted ${result.rowCount} rows with direct transaction SQL`);
+            
+            await client.query('COMMIT');
+            console.log(`[AUTO_QUIZ ${timestamp}] Transaction committed successfully`);
+          } catch (transactionError) {
+            console.error(`[AUTO_QUIZ ${timestamp}] Transaction error:`, transactionError);
+            await client.query('ROLLBACK');
+            console.log(`[AUTO_QUIZ ${timestamp}] Transaction rolled back`);
+            
+            // Second attempt: Use db.execute
+            try {
+              console.log(`[AUTO_QUIZ ${timestamp}] Trying db.execute as fallback`);
+              await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
+              console.log(`[AUTO_QUIZ ${timestamp}] Fallback deletion successful`);
+            } catch (executeError) {
+              console.error(`[AUTO_QUIZ ${timestamp}] db.execute error:`, executeError);
+            }
+          } finally {
+            // Release the client back to the pool
+            client.release();
+            console.log(`[AUTO_QUIZ ${timestamp}] Client released to pool`);
+          }
+          
+          // Verify deletion worked
+          const remainingQuestions = await storage.getQuizQuestions(moduleId);
+          console.log(`[AUTO_QUIZ ${timestamp}] After deletion operations, ${remainingQuestions.length} questions remain`);
+          
+          if (remainingQuestions.length > 0) {
+            console.log(`[AUTO_QUIZ ${timestamp}] Some questions still remain, trying one more approach...`);
+            // Last resort: Loop through each question
+            for (const question of remainingQuestions) {
               try {
-                await db.execute(sql`DELETE FROM quiz_questions WHERE module_id = ${moduleId}`);
-                console.log(`[AUTO_QUIZ ${Date.now()}] Successfully deleted questions with direct SQL`);
-              } catch (sqlError) {
-                console.error(`[AUTO_QUIZ ${Date.now()}] Error with direct SQL deletion:`, sqlError);
-
-                // Fallback to regular deletion
-                for (const question of existingQuestions) {
-                  try {
-                    await storage.deleteQuizQuestion(question.id);
-                    console.log(`[AUTO_QUIZ ${Date.now()}] Deleted question ${question.id}`);
-                  } catch (deleteError) {
-                    console.error(`[AUTO_QUIZ ${Date.now()}] Failed to delete question ${question.id}:`, deleteError);
-                  }
-                }
-              }
-            } else {
-              // If db.execute isn't available, use regular deletion
-              for (const question of existingQuestions) {
-                try {
-                  await storage.deleteQuizQuestion(question.id);
-                  console.log(`[AUTO_QUIZ ${Date.now()}] Deleted question ${question.id}`);
-                } catch (deleteError) {
-                  console.error(`[AUTO_QUIZ ${Date.now()}] Failed to delete question ${question.id}:`, deleteError);
-                }
+                await storage.deleteQuizQuestion(question.id);
+                console.log(`[AUTO_QUIZ ${timestamp}] Deleted question ${question.id}`);
+              } catch (deleteError) {
+                console.error(`[AUTO_QUIZ ${timestamp}] Failed to delete question ${question.id}:`, deleteError);
               }
             }
-
-            // Double-check that questions were deleted
-            const remainingQuestions = await storage.getQuizQuestions(moduleId);
-            console.log(`[AUTO_QUIZ ${Date.now()}] After deletion, ${remainingQuestions.length} questions remain`);
           }
-        } catch (deleteError) {
-          console.error(`[AUTO_QUIZ ${Date.now()}] Error deleting existing questions:`, deleteError);
-          // Continue with generation even if deletion fails
+        } catch (dbError) {
+          console.error(`[AUTO_QUIZ ${timestamp}] Database operation error:`, dbError);
         }
 
         // Skip the check for existing questions - we will always generate new ones
