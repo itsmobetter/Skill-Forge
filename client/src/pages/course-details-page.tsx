@@ -258,16 +258,15 @@ export default function CourseDetailsPage() {
                         </div>
                       )}
 
-                      {currentModule?.hasQuiz && (
-                        <div className="mt-4 pt-4 border-t border-slate-200">
-                          <Button 
-                            onClick={() => setIsQuizOpen(true)}
-                            className="mt-2"
-                          >
-                            Take Module Quiz
-                          </Button>
-                        </div>
-                      )}
+                      <div className="mt-4 pt-4 border-t border-slate-200">
+                        <Button 
+                          onClick={() => setIsQuizOpen(true)}
+                          className="mt-2"
+                          disabled={!currentModule?.hasQuiz}
+                        >
+                          {currentModule?.hasQuiz ? "Take Module Quiz" : "Quiz Generation in Progress"}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -300,9 +299,11 @@ export default function CourseDetailsPage() {
           onQuizComplete={(passed) => {
             console.log("Quiz completed, passed:", passed);
             if (passed) {
-              // Just invalidate the queries to refresh data, but don't automatically move to next module
+              // Invalidate all relevant queries to ensure data consistency across the app
               queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${id}/progress`] });
               queryClient.invalidateQueries({ queryKey: [`/api/courses/${id}/modules`] });
+              queryClient.invalidateQueries({ queryKey: ['/api/user/dashboard'] });
+              queryClient.invalidateQueries({ queryKey: [`/api/user/certificates`] });
               
               // Add a toast to inform the user they can continue with the course
               toast({

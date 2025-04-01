@@ -11,7 +11,7 @@ import QuizResults from '@/components/quiz/quiz-results';
 import QuizHistory from '@/components/quiz/quiz-history';
 import QuizModal from '@/components/quiz/quiz-modal';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { Module, Course, Material } from '@shared/schema';
 
@@ -95,14 +95,25 @@ export default function ModuleDetailPage() {
         return;
       }
       
-      await apiRequest('POST', `/api/courses/${courseId}/modules/${moduleId}/progress`, {
+      const response = await apiRequest('POST', `/api/courses/${courseId}/modules/${moduleId}/progress`, {
         progress
       });
       
       // Update the local progress state
       setModuleProgress(progress);
       
+      // Invalidate relevant queries to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: [`/api/user/courses/${courseId}/progress`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/courses/${courseId}/modules`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/dashboard'] });
+      
+      // Also invalidate the specific module query to refresh its completion status
+      queryClient.invalidateQueries({ queryKey: [`/api/courses/${courseId}/modules/${moduleId}`] });
+      
       if (progress === 100) {
+        // Also check if all modules are completed to ensure certificates can be unlocked
+        queryClient.invalidateQueries({ queryKey: [`/api/user/certificates`] });
+        
         toast({
           title: 'Module Completed',
           description: 'You have successfully completed this module.',
@@ -324,15 +335,16 @@ export default function ModuleDetailPage() {
                     ) : (
                       <div className="text-center py-6">
                         <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 mb-4">
-                          <h3 className="text-lg font-medium text-yellow-800 mb-2">Quiz Not Available Yet</h3>
+                          <h3 className="text-lg font-medium text-yellow-800 mb-2">Quiz Requires Transcription</h3>
                           <p className="text-yellow-700">
-                            This module doesn't have a quiz yet. {user?.isAdmin && "As an admin, you can generate a quiz from the transcript tab."}
+                            The quiz will be available once the video transcription is generated.
+                            {!module.videoUrl && " This module needs video content first."}
                           </p>
                         </div>
                         
                         {module.videoUrl ? (
                           <p className="text-slate-600">
-                            Please watch the video content and review the materials for this module.
+                            The system will automatically generate a transcript when you watch the video.
                           </p>
                         ) : (
                           <p className="text-slate-600">
@@ -343,16 +355,15 @@ export default function ModuleDetailPage() {
                     )}
                   </div>
                 </CardContent>
-                {module.hasQuiz && (
-                  <CardFooter>
-                    <Button 
-                      className="w-full"
-                      onClick={() => setQuizOpen(true)}
-                    >
-                      Start Quiz
-                    </Button>
-                  </CardFooter>
-                )}
+                <CardFooter>
+                  <Button 
+                    className="w-full"
+                    onClick={() => setQuizOpen(true)}
+                    disabled={!module.hasQuiz}
+                  >
+                    {module.hasQuiz ? "Start Quiz" : "Generate Quiz"}
+                  </Button>
+                </CardFooter>
               </Card>
             </TabsContent>
             

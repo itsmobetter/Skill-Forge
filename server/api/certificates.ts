@@ -71,11 +71,29 @@ export function setupCertificateRoutes(router: Router, requireAuth: any, require
         }
         
         // Check if all modules are completed
-        if (modules.length > completedModules.length) {
+        // Log completion status for debugging
+        console.log(`[Certificate check] User ${userId} for course ${courseId}`);
+        console.log(`[Certificate check] Modules: ${modules.length}, Completed: ${completedModules.length}`);
+        
+        // Get module IDs for comparison
+        const courseModuleIds = modules.map(m => m.id);
+        const completedModuleIds = completedModules.map(c => c.moduleId);
+        
+        // Check if every course module has been completed
+        const allModulesCompleted = courseModuleIds.every(moduleId => 
+          completedModuleIds.includes(moduleId)
+        );
+        
+        if (!allModulesCompleted) {
+          // Find which modules are missing completion
+          const missingModuleIds = courseModuleIds.filter(id => !completedModuleIds.includes(id));
+          console.log(`[Certificate check] Missing modules: ${missingModuleIds.join(', ')}`);
+          
           return res.status(400).json({ 
             message: "Not all modules are completed",
             completed: completedModules.length,
-            total: modules.length
+            total: modules.length,
+            missingModules: missingModuleIds
           });
         }
       }

@@ -1347,16 +1347,28 @@ export class DatabaseStorage implements IStorage {
   async getCompletedModules(userId: number, courseId: string): Promise<ModuleCompletion[]> {
     return executeQuery(
       async () => {
+        // First get all modules for this course
         const courseModules = await this.getCourseModules(courseId);
         const moduleIds = courseModules.map(module => module.id);
-
+        
+        // Log for debugging
+        console.log(`[getCompletedModules] Course ${courseId} has ${moduleIds.length} modules: ${moduleIds.join(', ')}`);
+        
+        // Query completions for this user that match modules in this course
         const completions = await db.select().from(schema.moduleCompletions)
           .where(and(
             eq(schema.moduleCompletions.userId, userId),
             eq(schema.moduleCompletions.completed, true)
           ));
-
-        return completions.filter(completion => moduleIds.includes(completion.moduleId));
+        
+        // Filter to only include completions for modules in this course
+        const courseCompletions = completions.filter(completion => moduleIds.includes(completion.moduleId));
+        
+        // Log for debugging
+        console.log(`[getCompletedModules] User ${userId} has completed ${courseCompletions.length}/${moduleIds.length} modules in course ${courseId}`);
+        courseCompletions.forEach(c => console.log(`- Module ${c.moduleId} completed`));
+        
+        return courseCompletions;
       },
       `Failed to get completed modules for user ${userId} and course ${courseId}`
     );

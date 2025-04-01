@@ -42,17 +42,31 @@ export function TranscriptViewer({ moduleId, videoUrl }: TranscriptViewerProps) 
       const data = await res.json();
       
       if (data && data.text) {
+        // Transcription found, set it
         setTranscriptionData({
           text: data.text,
           timestampedText: data.timestampedText || [],
           videoId: data.videoId
         });
       } else {
-        setTranscriptionData(null);
+        // No transcription found and video URL exists
+        if (videoUrl) {
+          console.log("No transcription found, auto-generating...");
+          await generateTranscription();
+        } else {
+          setTranscriptionData(null);
+        }
       }
     } catch (error) {
       console.error('Error fetching transcription:', error);
-      setTranscriptionData(null);
+      
+      // If error occurred and we have a videoUrl, try to auto-generate
+      if (videoUrl) {
+        console.log("Error fetching transcription, attempting to auto-generate...");
+        await generateTranscription();
+      } else {
+        setTranscriptionData(null);
+      }
     } finally {
       setLoading(false);
     }
