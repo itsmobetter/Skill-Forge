@@ -1,0 +1,52 @@
+🛠️ I want to build a new feature for my LearningPro app: an internal SOP document editor and viewer.
+
+🎯 Objective:
+Instead of uploading documents, I want to create structured internal SOPs directly in the app. Admins should fill in the SOP using a form, and users can read the formatted version and interact with it using the AI chatbot.
+
+🧩 Here's what I already have:
+- Tech stack: TypeScript + Vite + Tailwind + Express-like backend (in `server/`)
+- Frontend in `/client/src`
+- Existing chatbot logic in `gemini.ts`, `vector-db.ts`, `llm.ts`
+- Routing handled via `routes.ts`
+- Light storage via `storage.ts` or temporary JSON
+- Type-safe setup using `tsconfig.json`, `tailwind.config.ts`, and a clean module structure
+
+🔧 What I need you to do:
+
+### 1. **Backend API Setup**
+Create 2 endpoints in `routes.ts`:
+- `GET /api/sop` – fetch a single SOP document from a JSON file (`sopData.json` in `server/`)
+- `POST /api/sop` – allow saving of the SOP document
+Use `fs.readFileSync` and `fs.writeFileSync` for now. No DB integration yet.
+
+### 2. **Frontend Pages**
+Create 2 new components in the frontend:
+
+#### `SOPEditor.tsx`
+Admin-only page with form inputs for:
+- Title
+- Objective
+- Scope
+- Responsibilities (list)
+- Procedure (steps)
+- References (list)
+
+Use local state to handle these fields.
+On load, pull existing SOP via `GET /api/sop`. On save, `POST` to update.
+
+#### `SOPViewer.tsx`
+Displays the above SOP in a formatted way using Tailwind (headings, lists, steps).
+Include a button: **“Ask AI about this SOP”** that sends the full SOP object to the chatbot.
+
+### 3. **Chatbot Integration**
+Update the AI logic in `gemini.ts` or `vector-db.ts` to:
+- Accept SOP content (e.g. `type: 'sop', data: { ... }`)
+- Handle user prompts about the SOP by including the SOP fields as part of the AI context
+
+🧠 Important:
+- This SOP editor should be flexible so it can be extended to multiple SOPs in the future.
+- All new files should follow the existing project structure and style.
+- Assume admin auth is already handled.
+- If needed, add a nav link from the main app UI to access the SOP Editor & Viewer.
+
+Let’s go!
