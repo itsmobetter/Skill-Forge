@@ -1,13 +1,17 @@
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Table2, File } from "lucide-react";
+import { Download, FileText, Table2, File, Eye } from "lucide-react";
+import { MaterialSOPViewer } from "@/components/module/material-sop-viewer";
 
 interface Material {
   id: string;
   title: string;
-  type: string; // Allow any string for type
+  type: string;
   fileSize: string;
   url: string;
+  sopId?: string;
 }
 
 interface CourseMaterialsProps {
@@ -15,6 +19,8 @@ interface CourseMaterialsProps {
 }
 
 export default function CourseMaterials({ materials }: CourseMaterialsProps) {
+  const [selectedSopId, setSelectedSopId] = useState<string | null>(null);
+
   // Helper to get icon based on material type
   const getIcon = (type: string) => {
     switch (type) {
@@ -29,9 +35,13 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
     }
   };
 
-  // Helper to handle download (in a real app, this would trigger the actual download)
+  // Helper to handle download for non-SOP materials
   const handleDownload = (material: Material) => {
-    window.open(material.url, "_blank");
+    if (material.sopId) {
+      setSelectedSopId(material.sopId);
+    } else {
+      window.open(material.url, "_blank");
+    }
   };
 
   return (
@@ -40,29 +50,42 @@ export default function CourseMaterials({ materials }: CourseMaterialsProps) {
         <CardTitle className="text-lg font-medium">Course Materials</CardTitle>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="space-y-3">
-          {materials.map((material) => (
-            <div 
-              key={material.id}
-              className="flex items-center p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+        {selectedSopId ? (
+          <div className="space-y-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedSopId(null)}
+              className="mb-2"
             >
-              {getIcon(material.type)}
-              <div className="flex-1 ml-3">
-                <h3 className="text-sm font-medium text-slate-900">{material.title}</h3>
-                <p className="text-xs text-slate-500">
-                  {material.type.charAt(0).toUpperCase() + material.type.slice(1)} • {material.fileSize}
-                </p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => handleDownload(material)}
+              Back to Materials
+            </Button>
+            <MaterialSOPViewer sopId={selectedSopId} />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {materials.map((material) => (
+              <div 
+                key={material.id}
+                className="flex items-center p-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
+                {getIcon(material.type)}
+                <div className="flex-1 ml-3">
+                  <h3 className="text-sm font-medium text-slate-900">{material.title}</h3>
+                  <p className="text-xs text-slate-500">
+                    {material.type.charAt(0).toUpperCase() + material.type.slice(1)} {material.sopId && "• SOP"} {!material.sopId && `• ${material.fileSize}`}
+                  </p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => handleDownload(material)}
+                >
+                  {material.sopId ? <Eye className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
