@@ -467,6 +467,14 @@ export class MemStorage implements IStorage {
     this.materials.set(id, newMaterial);
     return newMaterial;
   }
+  
+  async deleteMaterial(materialId: string): Promise<boolean> {
+    if (this.materials.has(materialId)) {
+      this.materials.delete(materialId);
+      return true;
+    }
+    return false;
+  }
 
   async updateMaterial(id: string, materialUpdate: Partial<Material>): Promise<Material> {
     const material = this.materials.get(id);

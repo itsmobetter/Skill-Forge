@@ -258,22 +258,23 @@ export const getCpCpkModules = (courseId: string): Omit<InsertModule, 'id'>[] =>
   }
 ];
 
-// Materials for the ISO 9001 course
-export const getISOMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] => [
+// Materials for the ISO 9001 course 
+export const getISOMaterials = (courseId: string, sopIds: Record<string, string>): Omit<InsertMaterial, 'id'>[] => [
   {
     courseId,
-    type: 'pdf',
-    title: 'ISO 9001:2015 Standard Overview',
-    description: 'Complete overview document of the ISO 9001:2015 standard with key points highlighted.',
-    url: 'https://example.com/iso-9001-overview.pdf',
-    fileSize: '2.4 MB'
+    type: 'sop',
+    title: 'ISO 9001:2015 Document Control Procedure',
+    description: 'Standard procedure for controlling documents required by the quality management system.',
+    url: '#',
+    fileSize: 'SOP Document',
+    sopId: sopIds['ISO 9001:2015 Document Control Procedure']
   },
   {
     courseId,
     type: 'pdf',
     title: 'Quality Management Principles Guide',
     description: 'Detailed explanation of the seven quality management principles with examples and case studies.',
-    url: 'https://example.com/qm-principles.pdf',
+    url: '#',
     fileSize: '3.8 MB'
   },
   {
@@ -281,7 +282,7 @@ export const getISOMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] 
     type: 'pdf',
     title: 'Process Mapping Templates',
     description: 'Templates and guidelines for creating effective process maps for your organization.',
-    url: 'https://example.com/process-mapping.pdf',
+    url: '#',
     fileSize: '1.5 MB'
   },
   {
@@ -289,27 +290,28 @@ export const getISOMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] 
     type: 'pdf',
     title: 'Risk Assessment Worksheets',
     description: 'Practical worksheets for identifying and assessing risks in your quality management system.',
-    url: 'https://example.com/risk-assessment.pdf',
+    url: '#',
     fileSize: '2.1 MB'
   }
 ];
 
 // Materials for the SPC course
-export const getSPCMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] => [
+export const getSPCMaterials = (courseId: string, sopIds: Record<string, string>): Omit<InsertMaterial, 'id'>[] => [
   {
     courseId,
-    type: 'pdf',
-    title: 'Statistical Process Control Handbook',
-    description: 'Comprehensive handbook covering all aspects of Statistical Process Control with examples.',
-    url: 'https://example.com/spc-handbook.pdf',
-    fileSize: '4.2 MB'
+    type: 'sop',
+    title: 'Statistical Process Control Implementation',
+    description: 'Standardized approach for implementing Statistical Process Control (SPC) in manufacturing processes.',
+    url: '#',
+    fileSize: 'SOP Document',
+    sopId: sopIds['Statistical Process Control Implementation']
   },
   {
     courseId,
     type: 'pdf',
     title: 'Control Chart Templates',
     description: 'Ready-to-use templates for creating various types of control charts in Excel.',
-    url: 'https://example.com/control-charts.pdf',
+    url: '#',
     fileSize: '1.8 MB'
   },
   {
@@ -317,27 +319,28 @@ export const getSPCMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] 
     type: 'pdf',
     title: 'Case Studies in SPC Implementation',
     description: 'Real-world case studies of successful SPC implementation in various industries.',
-    url: 'https://example.com/spc-cases.pdf',
+    url: '#',
     fileSize: '3.5 MB'
   }
 ];
 
 // Materials for the Cp & Cpk course
-export const getCpCpkMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[] => [
+export const getCpCpkMaterials = (courseId: string, sopIds: Record<string, string>): Omit<InsertMaterial, 'id'>[] => [
   {
     courseId,
-    type: 'pdf',
-    title: 'Process Capability Guidelines',
-    description: 'Comprehensive guide to understanding and calculating process capability indices.',
-    url: 'https://example.com/process-capability-guide.pdf',
-    fileSize: '3.6 MB'
+    type: 'sop',
+    title: 'Process Capability Analysis Procedure',
+    description: 'Standard method for conducting process capability studies to determine if processes meet quality requirements.',
+    url: '#',
+    fileSize: 'SOP Document',
+    sopId: sopIds['Process Capability Analysis Procedure']
   },
   {
     courseId,
     type: 'spreadsheet',
     title: 'Cp/Cpk Calculator',
     description: 'Excel-based calculator for computing process capability indices from sample data.',
-    url: 'https://example.com/cpk-calculator.xlsx',
+    url: '#',
     fileSize: '750 KB'
   },
   {
@@ -345,7 +348,7 @@ export const getCpCpkMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[
     type: 'pdf',
     title: 'Process Capability Case Studies',
     description: 'Real-world examples of how process capability analysis improved manufacturing quality.',
-    url: 'https://example.com/cpk-cases.pdf',
+    url: '#',
     fileSize: '2.8 MB'
   },
   {
@@ -353,15 +356,32 @@ export const getCpCpkMaterials = (courseId: string): Omit<InsertMaterial, 'id'>[
     type: 'pdf',
     title: 'Statistical Distributions Reference',
     description: 'Reference guide for understanding statistical distributions in process capability analysis.',
-    url: 'https://example.com/statistical-distributions.pdf',
+    url: '#',
     fileSize: '4.1 MB'
   }
 ];
 
 // Function to seed all the default courses, modules, and materials
+// Import the SOP seeding function
+import { seedDefaultSOPs, defaultSOPs } from './seedDefaultSOPs';
+
 export async function seedDefaultCourses() {
   try {
-    console.log('Starting to seed default courses...');
+    console.log('Starting to seed default courses and SOPs...');
+    
+    // Seed SOPs first to get their IDs
+    await seedDefaultSOPs();
+    
+    // Get all SOPs to reference in materials
+    const allSOPs = await storage.getAllSOPs();
+    const sopIds: Record<string, string> = {};
+    
+    // Create a map of SOP titles to IDs for easy reference
+    allSOPs.forEach(sop => {
+      sopIds[sop.title] = sop.id;
+    });
+    
+    console.log('SOP IDs retrieved:', Object.keys(sopIds).length);
     
     // Check if courses already exist
     const existingCourses = await storage.getAllCourses();
@@ -390,8 +410,8 @@ export async function seedDefaultCourses() {
             await storage.createModule(moduleData);
           }
           
-          // Create materials for ISO course
-          const materials = getISOMaterials(course.id);
+          // Create materials for ISO course with SOP references
+          const materials = getISOMaterials(course.id, sopIds);
           for (const materialData of materials) {
             console.log(`Creating material: ${materialData.title}`);
             await storage.createMaterial(materialData);
@@ -406,8 +426,8 @@ export async function seedDefaultCourses() {
             await storage.createModule(moduleData);
           }
           
-          // Create materials for SPC course
-          const materials = getSPCMaterials(course.id);
+          // Create materials for SPC course with SOP references
+          const materials = getSPCMaterials(course.id, sopIds);
           for (const materialData of materials) {
             console.log(`Creating material: ${materialData.title}`);
             await storage.createMaterial(materialData);
@@ -422,8 +442,8 @@ export async function seedDefaultCourses() {
             await storage.createModule(moduleData);
           }
           
-          // Create materials for Cp & Cpk course
-          const materials = getCpCpkMaterials(course.id);
+          // Create materials for Cp & Cpk course with SOP references
+          const materials = getCpCpkMaterials(course.id, sopIds);
           for (const materialData of materials) {
             console.log(`Creating material: ${materialData.title}`);
             await storage.createMaterial(materialData);
@@ -447,8 +467,8 @@ export async function seedDefaultCourses() {
               await storage.createModule(moduleData);
             }
             
-            // Create materials
-            const materials = getISOMaterials(course.id);
+            // Create materials with SOP references
+            const materials = getISOMaterials(course.id, sopIds);
             for (const materialData of materials) {
               console.log(`Creating material: ${materialData.title}`);
               await storage.createMaterial(materialData);
@@ -462,8 +482,8 @@ export async function seedDefaultCourses() {
               await storage.createModule(moduleData);
             }
             
-            // Create materials
-            const materials = getSPCMaterials(course.id);
+            // Create materials with SOP references
+            const materials = getSPCMaterials(course.id, sopIds);
             for (const materialData of materials) {
               console.log(`Creating material: ${materialData.title}`);
               await storage.createMaterial(materialData);
@@ -477,8 +497,8 @@ export async function seedDefaultCourses() {
               await storage.createModule(moduleData);
             }
             
-            // Create materials
-            const materials = getCpCpkMaterials(course.id);
+            // Create materials with SOP references
+            const materials = getCpCpkMaterials(course.id, sopIds);
             for (const materialData of materials) {
               console.log(`Creating material: ${materialData.title}`);
               await storage.createMaterial(materialData);
@@ -503,8 +523,8 @@ export async function seedDefaultCourses() {
           await storage.createModule(moduleData);
         }
         
-        // Create materials for ISO course
-        const materials = getISOMaterials(course.id);
+        // Create materials for ISO course with SOP references
+        const materials = getISOMaterials(course.id, sopIds);
         for (const materialData of materials) {
           console.log(`Creating material: ${materialData.title}`);
           await storage.createMaterial(materialData);
@@ -519,8 +539,8 @@ export async function seedDefaultCourses() {
           await storage.createModule(moduleData);
         }
         
-        // Create materials for SPC course
-        const materials = getSPCMaterials(course.id);
+        // Create materials for SPC course with SOP references
+        const materials = getSPCMaterials(course.id, sopIds);
         for (const materialData of materials) {
           console.log(`Creating material: ${materialData.title}`);
           await storage.createMaterial(materialData);
@@ -535,8 +555,8 @@ export async function seedDefaultCourses() {
           await storage.createModule(moduleData);
         }
         
-        // Create materials for Cp & Cpk course
-        const materials = getCpCpkMaterials(course.id);
+        // Create materials for Cp & Cpk course with SOP references
+        const materials = getCpCpkMaterials(course.id, sopIds);
         for (const materialData of materials) {
           console.log(`Creating material: ${materialData.title}`);
           await storage.createMaterial(materialData);
@@ -544,8 +564,8 @@ export async function seedDefaultCourses() {
       }
     }
     
-    console.log('Default courses seeded successfully');
+    console.log('Default courses and SOPs seeded successfully');
   } catch (error) {
-    console.error('Error seeding default courses:', error);
+    console.error('Error seeding default courses and SOPs:', error);
   }
 }
