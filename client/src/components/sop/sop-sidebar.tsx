@@ -46,25 +46,33 @@ export function SOPSidebar() {
     )}>
       <div className="flex h-14 items-center border-b px-4 justify-between">
         {!isCollapsed && (
-          <Link to="/sop">
-            <Button variant="ghost" className="flex items-center gap-2 h-9 justify-start">
-              <BookMarked className="h-5 w-5" />
-              <span className="font-semibold">SOPs</span>
-            </Button>
-          </Link>
+          <div className="flex space-x-2">
+            <Link to="/">
+              <Button variant="ghost" className="flex items-center gap-2 h-9 justify-start">
+                <ChevronLeft className="h-4 w-4" />
+                <span>Dashboard</span>
+              </Button>
+            </Link>
+            <Link to="/sop">
+              <Button variant="ghost" className="flex items-center gap-2 h-9 justify-start">
+                <BookMarked className="h-5 w-5" />
+                <span className="font-semibold">SOPs</span>
+              </Button>
+            </Link>
+          </div>
         )}
         {isCollapsed && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link to="/sop">
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <BookMarked className="h-5 w-5" />
+                <Link to="/">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 mb-1">
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">
-                <p>Standard Operating Procedures</p>
+                <p>Back to Dashboard</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
