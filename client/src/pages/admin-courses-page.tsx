@@ -3,7 +3,19 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Pencil, Trash2, FileVideo, Upload, ImagePlus, Star, Loader2, BrainCircuit } from "lucide-react";
+import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  FileVideo, 
+  Upload, 
+  ImagePlus, 
+  Star, 
+  Loader2, 
+  BrainCircuit, 
+  FileText, 
+  Link
+} from "lucide-react";
 
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -52,6 +64,7 @@ const moduleSchema = z.object({
   order: z.number().min(1, "Order must be at least 1"),
   duration: z.string().min(1, "Duration is required"),
   videoUrl: z.string().url("Please provide a valid URL for the video").optional(),
+  sopId: z.string().optional(),
 });
 
 type ModuleFormValues = z.infer<typeof moduleSchema>;
@@ -77,10 +90,34 @@ export default function AdminCoursesPage() {
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [isGeneratingTranscription, setIsGeneratingTranscription] = useState(false);
   const [transcribingModuleId, setTranscribingModuleId] = useState<string | null>(null);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+  const [selectedSopId, setSelectedSopId] = useState<string | null>(null);
 
   // Fetch courses
-  const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
+  const { data: courses = [], isLoading: isLoadingCourses } = useQuery<any[]>({
     queryKey: ["/api/courses"],
+  });
+  
+  // Fetch SOPs for SOP assignment
+  const { data: sops = [], isLoading: isLoadingSops } = useQuery<any[]>({
+    queryKey: ["/api/sop"],
+    enabled: isEditModuleOpen || isAddModuleOpen,
+  });
+  
+  // Fetch materials for selected course
+  const { data: materials = [], isLoading: isLoadingMaterials } = useQuery({
+    queryKey: ["/api/courses", selectedCourse, "materials"],
+    queryFn: async () => {
+      if (!selectedCourse) return [];
+      try {
+        const res = await apiRequest("GET", `/api/courses/${selectedCourse}/materials`);
+        return await res.json();
+      } catch (error) {
+        console.error("Error fetching materials:", error);
+        return [];
+      }
+    },
+    enabled: !!selectedCourse,
   });
 
   // Fetch modules for selected course
@@ -330,6 +367,7 @@ export default function AdminCoursesPage() {
       order: 1,
       duration: "",
       videoUrl: "",
+      sopId: "",
     },
   });
 
@@ -470,6 +508,7 @@ export default function AdminCoursesPage() {
       order: module.order,
       duration: module.duration,
       videoUrl: module.videoUrl || "",
+      sopId: module.sopId || "",
     });
     setIsEditModuleOpen(true);
   };
@@ -885,6 +924,40 @@ export default function AdminCoursesPage() {
                             </FormItem>
                           )}
                         />
+                        <FormField
+                          control={moduleForm.control}
+                          name="sopId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Assigned SOP</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a SOP to assign" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">No SOP Assigned</SelectItem>
+                                  {sops.map((sop: any) => (
+                                    <SelectItem key={sop.id} value={sop.id}>
+                                      {sop.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <span>Assign a Standard Operating Procedure to this module</span>
+                                </div>
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
                       <DialogFooter>
                         <Button
@@ -1013,6 +1086,7 @@ export default function AdminCoursesPage() {
                         <TableHead>Title</TableHead>
                         <TableHead>Duration</TableHead>
                         <TableHead>Video</TableHead>
+                        <TableHead>SOP</TableHead>
                         <TableHead>Quiz</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -1020,7 +1094,7 @@ export default function AdminCoursesPage() {
                     <TableBody>
                       {isLoadingModules ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
+                          <TableCell colSpan={7} className="text-center py-8">
                             <div className="flex justify-center">
                               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
                             </div>
@@ -1029,7 +1103,7 @@ export default function AdminCoursesPage() {
                         </TableRow>
                       ) : modules.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
+                          <TableCell colSpan={7} className="text-center py-8">
                             <p>No modules found</p>
                           </TableCell>
                         </TableRow>
@@ -1046,6 +1120,18 @@ export default function AdminCoursesPage() {
                                   <span className="text-green-600 font-medium text-sm">Available</span>
                                 ) : (
                                   <span className="text-amber-600 font-medium text-sm">Not set</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {module.sopId ? (
+                                  <span className="text-green-600 font-medium text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4" />
+                                      <span>Assigned</span>
+                                    </div>
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-600 font-medium text-sm">None</span>
                                 )}
                               </TableCell>
                               <TableCell>
@@ -1271,6 +1357,40 @@ export default function AdminCoursesPage() {
                       </FormControl>
                       <FormDescription>
                         Enter URL for video content (YouTube, Vimeo, etc.)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={moduleForm.control}
+                  name="sopId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assigned SOP</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a SOP to assign" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No SOP Assigned</SelectItem>
+                          {sops.map((sop: any) => (
+                            <SelectItem key={sop.id} value={sop.id}>
+                              {sop.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span>Assign a Standard Operating Procedure to this module</span>
+                        </div>
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

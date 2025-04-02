@@ -117,11 +117,13 @@ export const modules = pgTable("modules", {
   hasQuiz: boolean("has_quiz").default(false).notNull(),
   tags: jsonb("tags").default([]),
   objectives: jsonb("objectives").default([]),
+  sopId: text("sop_id").references(() => standardOperatingProcedures.id),
 }, (table) => {
   return {
     courseIdIdx: index("modules_course_id_idx").on(table.courseId),
     hasQuizIdx: index("modules_has_quiz_idx").on(table.hasQuiz),
     orderIdx: index("modules_order_idx").on(table.order),
+    sopIdIdx: index("modules_sop_id_idx").on(table.sopId),
   };
 });
 
