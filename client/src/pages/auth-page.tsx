@@ -353,7 +353,7 @@ export default function AuthPage() {
             </div>
             <Button
               variant="outline"
-              className="w-full border-white/20 text-white hover:bg-white/10 hover:text-white"
+              className="w-full border-white/20 text-white bg-transparent hover:bg-white/10 hover:text-white"
               onClick={() => setActiveTab(activeTab === 'login' ? 'register' : 'login')}
             >
               {activeTab === 'login' ? 'Create an account' : 'Sign in instead'}
