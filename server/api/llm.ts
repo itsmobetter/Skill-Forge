@@ -218,12 +218,53 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
         }
       }
 
+      // Get SOP content if the module has a sopId
+      let sopContent = '';
+      if (module?.sopId) {
+        try {
+          const sop = await storage.getSOP(module.sopId);
+          if (sop) {
+            console.log(`Found SOP for module: ${sop.title}`);
+            
+            // Extract procedure steps as a string
+            let procedureSteps = '';
+            if (Array.isArray(sop.procedure)) {
+              procedureSteps = sop.procedure.map((step, index) => {
+                if (typeof step === 'string') {
+                  return `${index + 1}. ${step}`;
+                } else if (typeof step === 'object' && step !== null) {
+                  // Handle if it's stored as {title, description} object
+                  const title = step.title || '';
+                  const description = step.description || '';
+                  return `${index + 1}. ${title}${description ? ': ' + description : ''}`;
+                }
+                return '';
+              }).filter(Boolean).join('\n');
+            }
+            
+            // Format SOP content
+            sopContent = `
+Standard Operating Procedure: ${sop.title}
+Objective: ${sop.objective}
+Scope: ${sop.scope}
+Responsibilities: ${Array.isArray(sop.responsibilities) ? sop.responsibilities.join(', ') : sop.responsibilities}
+Procedure:
+${procedureSteps}
+References: ${Array.isArray(sop.references) ? sop.references.join(', ') : sop.references}
+`;
+          }
+        } catch (sopError) {
+          console.error("Error fetching SOP:", sopError);
+        }
+      }
+
       // Compile context
       const context = [
         `Course: ${course.title}`,
         course.description,
         module ? `Module: ${module.title}` : '',
         module?.description || '',
+        sopContent, // Add SOP content to context
         relevantSegments.length > 0 ? `Relevant Transcript Segments:\n${relevantSegments.join('\n')}` : '',
         ...transcriptions,
         ...pdfContents
@@ -238,8 +279,16 @@ export function setupLLMRoutes(router: Router, requireAuth: any) {
           role: "system",
           content: `You are an expert educational assistant for a learning management system. 
           Your goal is to provide helpful, accurate, and concise answers to questions about the course content.
+          
+          When a Standard Operating Procedure (SOP) is provided in the context, prioritize this information when 
+          answering questions related to processes, procedures, or methodologies. The SOPs contain official 
+          company-approved procedures and should be considered authoritative sources.
+          
           Use the context provided to inform your answers, but you can also draw on your general knowledge 
-          to provide comprehensive responses. Always be professional and supportive in your tone.`
+          to provide comprehensive responses. Always be professional and supportive in your tone.
+          
+          If a question relates to specific steps in a procedure, refer directly to the numbered steps in the SOP 
+          and explain how they should be followed in practical situations.`
         },
         {
           role: "user",
