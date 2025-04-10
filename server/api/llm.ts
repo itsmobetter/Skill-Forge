@@ -382,6 +382,48 @@ References: ${Array.isArray(sop.references) ? sop.references.join(', ') : sop.re
 
       // Get content for quiz generation - from multiple possible sources
       let quizContent: string;
+      let sopContent = '';
+
+      // Try to get SOP content if the module has a sopId
+      if (module?.sopId) {
+        try {
+          const sop = await storage.getSOP(module.sopId);
+          if (sop) {
+            console.log(`[AUTO_QUIZ] Found SOP for module: ${sop.title}`);
+            
+            // Extract procedure steps as a string
+            let procedureSteps = '';
+            if (Array.isArray(sop.procedure)) {
+              procedureSteps = sop.procedure.map((step, index) => {
+                if (typeof step === 'string') {
+                  return `${index + 1}. ${step}`;
+                } else if (typeof step === 'object' && step !== null) {
+                  // Handle if it's stored as {title, description} object
+                  const title = step.title || '';
+                  const description = step.description || '';
+                  return `${index + 1}. ${title}${description ? ': ' + description : ''}`;
+                }
+                return '';
+              }).filter(Boolean).join('\n');
+            }
+            
+            // Format SOP content
+            sopContent = `
+Standard Operating Procedure: ${sop.title}
+Objective: ${sop.objective}
+Scope: ${sop.scope}
+Responsibilities: ${Array.isArray(sop.responsibilities) ? sop.responsibilities.join(', ') : sop.responsibilities}
+Procedure:
+${procedureSteps}
+References: ${Array.isArray(sop.references) ? sop.references.join(', ') : sop.references}
+`;
+            
+            console.log(`[AUTO_QUIZ] Using SOP content for quiz generation (${sopContent.length} characters)`);
+          }
+        } catch (sopError) {
+          console.error("[AUTO_QUIZ] Error fetching SOP:", sopError);
+        }
+      }
 
       // 1. If content is provided directly in the request body, use that first
       if (content && typeof content === 'string' && content.trim().length > 100) {
@@ -391,12 +433,13 @@ References: ${Array.isArray(sop.references) ? sop.references.join(', ') : sop.re
         // 2. Try to get the module transcription
         const transcription = await storage.getModuleTranscription(moduleId);
 
-        // Check if we have a valid transcription with sufficient content
+        // 3. Check if we have a valid transcription with sufficient content
         if (transcription && transcription.text && transcription.text.trim().length >= 50) {
           console.log(`[AUTO_QUIZ] Using existing module transcription (${transcription.text.length} characters)`);
-          quizContent = transcription.text;
+          // Combine transcription with SOP content if available
+          quizContent = sopContent ? `${transcription.text}\n\n${sopContent}` : transcription.text;
         } else {
-          // 3. If no transcription, generate content based on module and course information
+          // 4. If no transcription, generate content based on module, course, and SOP information
           console.log(`[AUTO_QUIZ] No valid transcription found, using module/course metadata to generate content`);
 
           // Build a rich context from module and course data
@@ -413,15 +456,21 @@ References: ${Array.isArray(sop.references) ? sop.references.join(', ') : sop.re
             Course Description: ${courseDescription}
             Module Tags: ${moduleTags}
             Module Objectives: ${moduleObjectives}
+            ${sopContent ? `\n\nStandard Operating Procedure Information:\n${sopContent}` : ''}
           `.trim();
 
           // Check if we have enough context data
-          if (contextInfo.length < 100) {
+          if (contextInfo.length < 100 && !sopContent) {
             console.log(`[AUTO_QUIZ] Warning: Limited context information available for quiz generation`);
             // Still proceed but with a generic topic based on the module title
             quizContent = `Generate quality management quiz questions about "${moduleTitle}" in the context of "${courseTitle}". Focus on best practices, standards, and implementation details for quality management systems in engineering contexts. Include questions about measurement, standards compliance, and process improvement.`;
           } else {
             quizContent = `Generate quality management quiz questions based on this educational content: ${contextInfo}`;
+            
+            // Add specific instruction if SOP content is available
+            if (sopContent) {
+              quizContent += `\n\nInclude questions specifically about the Standard Operating Procedure (SOP) and its steps. Test understanding of the proper procedures, responsibilities, and implementation details as outlined in the SOP.`;
+            }
           }
 
           console.log(`[AUTO_QUIZ] Generated synthetic content for quiz generation (${quizContent.length} characters)`);
@@ -434,6 +483,10 @@ References: ${Array.isArray(sop.references) ? sop.references.join(', ') : sop.re
       // System instruction for quiz generation
       const systemInstruction = `You are an expert quiz generator for educational content. 
       Your task is to create multiple-choice quiz questions based on the provided course module content.
+      
+      If Standard Operating Procedure (SOP) content is included, create questions that specifically test
+      understanding of proper procedures, responsibilities, and implementation steps outlined in the SOP.
+      
       For each question, generate 4 options with exactly one correct answer.
       Format your response as a valid JSON array of questions with the following structure:
       [
