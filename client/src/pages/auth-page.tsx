@@ -59,25 +59,7 @@ const registerSchema = insertUserSchema
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-// Animation component to simulate AI-generated nodes
-const AnimatedNodes = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      <div className="absolute top-[10%] left-[20%] w-12 h-12 bg-primary/10 rounded-full animate-pulse"></div>
-      <div className="absolute top-[20%] left-[60%] w-8 h-8 bg-primary/20 rounded-full animate-pulse [animation-delay:1s]"></div>
-      <div className="absolute top-[30%] left-[30%] w-10 h-10 bg-primary/15 rounded-full animate-pulse [animation-delay:2s]"></div>
-      <div className="absolute top-[50%] left-[70%] w-14 h-14 bg-primary/20 rounded-full animate-pulse [animation-delay:0.5s]"></div>
-      <div className="absolute top-[70%] left-[40%] w-16 h-16 bg-primary/10 rounded-full animate-pulse [animation-delay:1.5s]"></div>
-      <div className="absolute top-[80%] left-[80%] w-6 h-6 bg-primary/25 rounded-full animate-pulse [animation-delay:0.7s]"></div>
-
-      {/* Connection lines */}
-      <div className="absolute top-[15%] left-[25%] w-[30%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform rotate-12"></div>
-      <div className="absolute top-[35%] left-[35%] w-[25%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform -rotate-6"></div>
-      <div className="absolute top-[55%] left-[40%] w-[35%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform rotate-12"></div>
-      <div className="absolute top-[75%] left-[50%] w-[30%] h-[1px] bg-gradient-to-r from-primary/30 to-transparent transform -rotate-6"></div>
-    </div>
-  );
-};
+// Removed AnimatedNodes component for minimalist design
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -122,28 +104,23 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
-      {/* Background with manufacturing theme */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-slate-100 to-primary/30 z-0"></div>
+      {/* Minimalist light background */}
+      <div className="absolute inset-0 bg-slate-50 z-0"></div>
 
-      {/* Circuit board pattern overlay */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNDB2NDBoLTQweiIvPjxwYXRoIGQ9Ik0xNSAyNWgxMHYxaC0xMHpNMTUgMTVoMTB2MWgtMTB6TTI1IDE1djEwaDFWMTV6TTE1IDE1djEwaDF2LTEweiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvZz48L3N2Zz4=')] opacity-10 z-0"></div>
-
-      {/* Animated neural network nodes */}
-      <AnimatedNodes />
+      {/* Subtle pattern overlay - very light */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNDB2NDBoLTQweiIvPjxwYXRoIGQ9Ik0xNSAyNWgxMHYxaC0xMHpNMTUgMTVoMTB2MWgtMTB6TTI1IDE1djEwaDFWMTV6TTE1IDE1djEwaDF2LTEweiIgZmlsbD0icmdiYSgwLDAsMCwwLjAyKSIvPjwvZz48L3N2Zz4=')] opacity-5 z-0"></div>
 
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-5 gap-8 items-center p-4 z-10">
         <div className="hidden md:flex md:col-span-3 flex-col text-slate-800 p-8 relative">
-          {/* Blob decoration */}
-          <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 -right-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+          {/* Simple accents - minimal */}
+          <div className="absolute -top-20 -left-20 w-32 h-32 bg-primary/5 rounded-full"></div>
+          <div className="absolute bottom-20 -right-20 w-36 h-36 bg-primary/5 rounded-full"></div>
 
           <div className="relative">
             <div className="flex items-center gap-3 mb-6">
-              <Brain className="h-8 w-8 text-primary animate-pulse" />
-              <h1 className="text-4xl font-extrabold">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
-                  Skill Forge
-                </span>
+              <Brain className="h-8 w-8 text-primary" />
+              <h1 className="text-4xl font-extrabold text-slate-800">
+                Skill Forge
               </h1>
             </div>
 
@@ -158,9 +135,9 @@ export default function AuthPage() {
             </p>
 
             <div className="grid grid-cols-2 gap-6">
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200 hover:border-primary/40 transition-colors shadow-sm">
+              <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
+                  <div className="bg-slate-50 p-3 rounded-lg">
                     <Factory className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-800">Smart Manufacturing</h3>
@@ -171,9 +148,9 @@ export default function AuthPage() {
                 </p>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200 hover:border-primary/40 transition-colors shadow-sm">
+              <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
+                  <div className="bg-slate-50 p-3 rounded-lg">
                     <Bot className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-800">AI Assistant</h3>
@@ -184,9 +161,9 @@ export default function AuthPage() {
                 </p>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200 hover:border-primary/40 transition-colors shadow-sm">
+              <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
+                  <div className="bg-slate-50 p-3 rounded-lg">
                     <LineChart className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-800">
@@ -199,9 +176,9 @@ export default function AuthPage() {
                 </p>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200 hover:border-primary/40 transition-colors shadow-sm">
+              <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="bg-primary/10 p-3 rounded-lg">
+                  <div className="bg-slate-50 p-3 rounded-lg">
                     <Cpu className="h-5 w-5 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-800">Digital Twin</h3>
@@ -223,15 +200,15 @@ export default function AuthPage() {
           </div>
         </div>
 
-        <Card className="w-full md:col-span-2 shadow-2xl bg-white/10 backdrop-blur-sm border-white/20">
+        <Card className="w-full md:col-span-2 shadow-md bg-white border-slate-100">
           <CardHeader className="space-y-1 pb-4">
             <div className="flex justify-center mb-2 md:hidden">
               <Brain className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold text-center text-primary">
+            <CardTitle className="text-2xl font-bold text-center text-slate-800">
               Skill Forge
             </CardTitle>
-            <CardDescription className="text-center text-slate-600">
+            <CardDescription className="text-center text-slate-500">
               Access your AI-powered manufacturing training
             </CardDescription>
           </CardHeader>
@@ -241,16 +218,16 @@ export default function AuthPage() {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/10">
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
                 <TabsTrigger
                   value="login"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=inactive]:text-slate-600 hover:text-slate-800"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=inactive]:text-slate-700 hover:text-slate-900"
                 >
                   Login
                 </TabsTrigger>
                 <TabsTrigger
                   value="register"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=inactive]:text-slate-600 hover:text-slate-800"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-white data-[state=inactive]:text-slate-700 hover:text-slate-900"
                 >
                   Register
                 </TabsTrigger>
@@ -454,7 +431,7 @@ export default function AuthPage() {
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 backdrop-blur-sm bg-white/5 text-slate-600">
+                <span className="px-2 bg-white text-slate-500">
                   {activeTab === "login"
                     ? "New to Skill Forge?"
                     : "Already have an account?"}
