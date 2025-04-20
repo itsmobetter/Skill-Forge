@@ -228,10 +228,8 @@ export default function AuthPage() {
             <div className="flex justify-center mb-2 md:hidden">
               <Brain className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold text-center text-slate-800">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
-                Skill Forge
-              </span>
+            <CardTitle className="text-2xl font-bold text-center text-primary">
+              Skill Forge
             </CardTitle>
             <CardDescription className="text-center text-slate-600">
               Access your AI-powered manufacturing training
