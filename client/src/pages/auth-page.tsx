@@ -230,7 +230,7 @@ export default function AuthPage() {
             </div>
             <CardTitle className="text-2xl font-bold text-center text-white">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
-                LearningPro
+                Skill Forge
               </span>
             </CardTitle>
             <CardDescription className="text-center text-slate-300">
@@ -458,7 +458,7 @@ export default function AuthPage() {
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 backdrop-blur-sm bg-white/5 text-slate-300">
                   {activeTab === "login"
-                    ? "New to LearningPro?"
+                    ? "New to Skill Forge?"
                     : "Already have an account?"}
                 </span>
               </div>
