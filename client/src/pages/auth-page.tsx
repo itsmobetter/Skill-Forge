@@ -142,7 +142,7 @@ export default function AuthPage() {
               <Brain className="h-8 w-8 text-primary animate-pulse" />
               <h1 className="text-4xl font-extrabold">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
-                  LearningPro
+                  Skill Forge
                 </span>
               </h1>
             </div>

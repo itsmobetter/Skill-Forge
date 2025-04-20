@@ -8,7 +8,7 @@ export default function AboutPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">About Skill Forge</h1>
           <p className="text-muted-foreground mt-2">
-            Learn more about our platform and the team behind it.
+            Learn more about Skill Forge and the team behind it.
           </p>
         </div>
 
