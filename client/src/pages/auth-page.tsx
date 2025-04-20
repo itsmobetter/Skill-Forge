@@ -325,7 +325,7 @@ export default function AuthPage() {
                     </div>
                     <Button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600"
+                      className="w-full bg-primary hover:bg-primary/90"
                       disabled={loginMutation.isPending}
                     >
                       {loginMutation.isPending ? (
@@ -430,7 +430,7 @@ export default function AuthPage() {
                     />
                     <Button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600"
+                      className="w-full bg-primary hover:bg-primary/90"
                       disabled={registerMutation.isPending}
                     >
                       {registerMutation.isPending ? (
