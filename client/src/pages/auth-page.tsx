@@ -275,7 +275,7 @@ export default function AuthPage() {
                           <FormControl>
                             <Input
                               placeholder="Enter your username or email"
-                              className="border-slate-200 bg-white/10 text-slate-800 placeholder:text-slate-400"
+                              className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400"
                               {...field}
                             />
                           </FormControl>
@@ -295,7 +295,7 @@ export default function AuthPage() {
                             <Input
                               type="password"
                               placeholder="••••••••"
-                              className="border-slate-200 bg-white/10 text-slate-800 placeholder:text-slate-400"
+                              className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400"
                               {...field}
                             />
                           </FormControl>
@@ -360,7 +360,7 @@ export default function AuthPage() {
                           <FormControl>
                             <Input
                               placeholder="Choose a username"
-                              className="border-slate-200 bg-white/10 text-slate-800 placeholder:text-slate-400"
+                              className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400"
                               {...field}
                             />
                           </FormControl>
@@ -380,7 +380,7 @@ export default function AuthPage() {
                             <Input
                               type="email"
                               placeholder="Enter your email"
-                              className="border-slate-200 bg-white/10 text-slate-800 placeholder:text-slate-400"
+                              className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400"
                               {...field}
                             />
                           </FormControl>
@@ -400,7 +400,7 @@ export default function AuthPage() {
                             <Input
                               type="password"
                               placeholder="••••••••"
-                              className="border-slate-200 bg-white/10 text-slate-800 placeholder:text-slate-400"
+                              className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400"
                               {...field}
                             />
                           </FormControl>
@@ -420,7 +420,7 @@ export default function AuthPage() {
                             <Input
                               type="password"
                               placeholder="••••••••"
-                              className="border-slate-200 bg-white/10 text-slate-800 placeholder:text-slate-400"
+                              className="border-slate-200 bg-white text-slate-800 placeholder:text-slate-400"
                               {...field}
                             />
                           </FormControl>
